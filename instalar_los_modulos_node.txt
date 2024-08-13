@@ -1,0 +1,1 @@
+para clonar el documento ,ejecutar el comando npm install
