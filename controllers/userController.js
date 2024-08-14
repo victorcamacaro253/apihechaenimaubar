@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 
 // Obtener todos los usuarios
 const getAllUser = async (req, res) => {
+    res.header('Access-Control-Allow-Origin','*')
     try {
         const [results] = await db.query('SELECT * FROM usuario');
         res.json(results);
@@ -38,6 +39,12 @@ const addUser = async (req, res) => {
     // Validación de entrada
     if (!name || !email || !password) {
         return res.status(400).json({ error: 'Nombre, correo y contraseña son requeridos' });
+    }
+
+     // Validación de la contraseña
+    
+     if (password.length < 7) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
     }
 
     try {
