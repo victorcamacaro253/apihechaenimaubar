@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script type="module">
+        fetch('http://localhost:3001/api/users')
+        .then(res => res.json())
+        .then(users=>{
+            const html = users.map(user => {
+                return `
+                <article data-id="${user.id}">
+                    <p>${user.nombre}</p>
+                    <p>${user.email}</p>
+                    </article>
+
+                `
+            }).join('')
+
+            document.querySelector('main').innerHTML= html
+        })
+    </script>
+</head>
+<body>
+    <main></main>
+</body>
+</html>
