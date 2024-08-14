@@ -109,10 +109,34 @@ const updateUser = (req, res) => {
 
 
 
+const deleteUser = (req, res) => {
+    const { id } = req.params;
+
+    // Ejecuta la consulta para eliminar el usuario por ID
+    db.query('DELETE FROM usuario WHERE id = ?', [id], (error, result) => {
+        if (error) {
+            // Manejo de errores
+            console.error('Error:', error); // Detalles del error en consola
+            return res.status(500).json({ message: 'Server error', error: error.message }); // Incluir detalles del error en la respuesta
+        }
+
+        // Verifica si se afectaron filas
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Devuelve una respuesta exitosa
+        res.status(200).json({ message: 'Usuario eliminido correctamente' });
+    });
+};
+
+
+
 
 module.exports = {
     getAllUser,
     addUser,
     getUserById,
-    updateUser
+    updateUser,
+    deleteUser
 };
