@@ -34,10 +34,10 @@ const getUserById = async (req, res) => {
 
 // Agregar un nuevo usuario
 const addUser = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, apellido,cedula, email, password } = req.body;
 
     // Validación de entrada
-    if (!name || !email || !password) {
+    if (!name || !apellido || !email || !password ) {
         return res.status(400).json({ error: 'Nombre, correo y contraseña son requeridos' });
     }
 
@@ -52,7 +52,7 @@ const addUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Consulta SQL para insertar el usuario
-        const [results] = await db.query('INSERT INTO usuario (nombre, correo, contraseña) VALUES (?, ?, ?)', [name, email, hashedPassword]);
+        const [results] = await db.query('INSERT INTO usuario (nombre,apellido,cedula,correo, contraseña) VALUES (?,?,?, ?, ?)', [name,apellido,cedula, email, hashedPassword]);
 
         res.status(201).json({ id: results.insertId, name, email });
     } catch (err) {
@@ -64,9 +64,9 @@ const addUser = async (req, res) => {
 // Actualizar un usuario por ID
 const updateUser = async (req, res) => {
     const { id } = req.params;
-    const { name, email, password } = req.body;
+    const { name, apellido ,cedula , email, password } = req.body;
 
-    if (!name && !email && !password) {
+    if (!name && !apellido && !email && !password ) {
         return res.status(400).json({ error: 'No hay datos para actualizar' });
     }
 
@@ -78,6 +78,18 @@ const updateUser = async (req, res) => {
             updateFields.push('nombre = ?');
             values.push(name);
         }
+
+        if (apellido) {
+            updateFields.push('apellido = ?');
+            values.push(apellido);
+        }
+
+        if (cedula) {
+            updateFields.push('cedula = ?');
+            values.push(cedula);
+        }
+
+
         if (email) {
             updateFields.push('correo = ?');
             values.push(email);
@@ -197,11 +209,62 @@ const partialUpdateUser = async (req, res) => {
 };
 
 
+const searchUsers = async (req,res)=>{
+    const {name,apellido,cedula} = req.query; //Usa req.query para parametros GET
+
+    //configurar encabezado CORS
+    res.header('Access-Control-Allow-Origin','*')
+    res.header('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS')
+    res.header('Access-Control-Allow-Headers','Content-Type')
+
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204)
+        
+    }
+
+    try{
+    //Se construye la consulta SQL
+
+    let query = 'SELECT * FROM usuario WHERE 1=1 ' // 1=1 para simplificar la concatenacion
+    let params = []
+
+    if (name) {
+        query += 'AND nombre LIKE ? ';
+        params.push(`%${name}%`);
+        
+    }
+
+    if (apellido) {
+        query += 'AND apellido LIKE ? ';
+        params.push(`%${apellido}%`);
+        
+    }
+
+    if (cedula) {
+        query += 'AND cedula LIKE ? ';
+        params.push(cedula);
+        
+    }
+    
+    //ejecuta la consulta de la base de datos 
+    const [results] = await db.query(query,params)
+
+    res.status(200).json(results)
+
+    
+    }catch (err){
+
+        console.error('Error ejecutando la consulta',err)
+        res.status(500).json({error:'Error interno del sevidor'})
+    }
+}
+
 module.exports = {
     getAllUser,
     getUserById,
     addUser,
     updateUser,
     deleteUser,
-    partialUpdateUser
+    partialUpdateUser,
+    searchUsers
 };
