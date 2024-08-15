@@ -1,1 +1,1 @@
-para clonar el documento ,ejecutar el comando npm install
+para clonar el documento y obtener la carpeta node_modules,ejecutar el comando npm install
