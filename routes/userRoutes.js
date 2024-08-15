@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const {check,validationResult} = require('express-validator');
+
 
 
 //Ruta para obtener los datos de la base de datos
@@ -17,5 +17,7 @@ router.get('/users/:id',userController.getUserById);
 router.put('/users/:id', userController.updateUser);
 
 router.delete('/users/:id', userController.deleteUser);
+
+router.patch('/users/:id', userController.partialUpdateUser)
 
 module.exports = router;
