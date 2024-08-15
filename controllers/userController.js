@@ -110,7 +110,19 @@ const updateUser = async (req, res) => {
 
 // Eliminar un usuario por ID
 const deleteUser = async (req, res) => {
+    
     const { id } = req.params;
+  
+      // Configurar encabezados CORS
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
+      // Manejar solicitudes OPTIONS para preflight
+      if (req.method === 'OPTIONS') {
+          return res.sendStatus(204);
+      }
+
 
     try {
         const [result] = await db.query('DELETE FROM usuario WHERE id = ?', [id]);
@@ -126,10 +138,70 @@ const deleteUser = async (req, res) => {
     }
 };
 
+
+ // Actualizar parcialmente un usuario por ID
+const partialUpdateUser = async (req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Validar que haya al menos un campo para actualizar
+    if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No hay datos para actualizar' });
+    }
+
+    try {
+        // Verificar si el usuario existe
+        const [userResults] = await db.query('SELECT * FROM usuario WHERE id = ?', [id]);
+        if (userResults.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        let updateFields = [];
+        let values = [];
+
+        // Solo actualizar los campos proporcionados
+        if (updates.name) {
+            updateFields.push('nombre = ?');
+            values.push(updates.name);
+        }
+        if (updates.email) {
+            updateFields.push('correo = ?');
+            values.push(updates.email);
+        }
+        if (updates.password) {
+            const hashedPassword = await bcrypt.hash(updates.password, 10);
+            updateFields.push('contraseña = ?');
+            values.push(hashedPassword);
+        }
+
+        // Añadir el ID al final de los valores
+        values.push(id);
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ error: 'No hay datos válidos para actualizar' });
+        }
+
+        // Construir la consulta SQL
+        const query = `UPDATE usuario SET ${updateFields.join(', ')} WHERE id = ?`;
+        const [result] = await db.query(query, values);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        res.status(200).json({ message: 'Usuario actualizado parcialmente exitosamente' });
+    } catch (err) {
+        console.error('Error ejecutando la consulta:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
 module.exports = {
     getAllUser,
     getUserById,
     addUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    partialUpdateUser
 };
