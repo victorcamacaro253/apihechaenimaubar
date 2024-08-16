@@ -35,40 +35,52 @@ const getUserById = async (req, res) => {
 
 // Agregar un nuevo usuario
 const addUser = async (req, res) => {
-    const { name, apellido,cedula, email, password } = req.body;
+    const { name, apellido, cedula, email, password } = req.body;
 
     // Validación de entrada
-    if (!name || !apellido || !email || !password ) {
-        return res.status(400).json({ error: 'Nombre, correo y contraseña son requeridos' });
+    if (!name || !apellido || !email || !password) {
+        return res.status(400).json({ error: 'Nombre, apellido, correo y contraseña son requeridos' });
     }
 
-     // Validación de la contraseña
-    
-     if (password.length < 7) {
+    // Validación de la contraseña
+    if (password.length < 7) {
         return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
     }
 
-    try {
+    // Iniciar transacción
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
 
-             // Verificar si el usuario ya existe
-        const [existingUser] = await db.query('SELECT * FROM usuario WHERE cedula = ?', [cedula]);
+    try {
+        // Verificar si el usuario ya existe
+        const [existingUser] = await connection.query('SELECT * FROM usuario WHERE cedula = ?', [cedula]);
         if (existingUser.length > 0) {
+            await connection.rollback(); // Deshacer la transacción
             return res.status(400).json({ error: 'Usuario ya existe' });
         }
 
-        
         // Hash de la contraseña
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Consulta SQL para insertar el usuario
-        const [results] = await db.query('INSERT INTO usuario (nombre,apellido,cedula,correo, contraseña) VALUES (?,?,?, ?, ?)', [name,apellido,cedula, email, hashedPassword]);
+        const [results] = await connection.query(
+            'INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña) VALUES (?, ?, ?, ?, ?)', 
+            [name, apellido, cedula, email, hashedPassword]
+        );
+
+        // Confirmar transacción
+        await connection.commit();
 
         res.status(201).json({ id: results.insertId, name, email });
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
+        await connection.rollback(); // Deshacer la transacción en caso de error
         res.status(500).json({ error: 'Error interno del servidor' });
+    } finally {
+        connection.release(); // Liberar el connection pool
     }
 };
+
 
 // Actualizar un usuario por ID
 const updateUser = async (req, res) => {
