@@ -2,6 +2,7 @@ const db = require('../db/db1'); // Asegúrate de que 'db' sea una instancia de 
 const bcrypt = require('bcrypt');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // Obtener todos los usuarios
 const getAllUser = async (req, res) => {
@@ -323,6 +324,17 @@ const loginUser = async (req, res) => {
             process.env.JWT_SECRET, // Asegúrate de tener JWT_SECRET en tus variables de entorno
             { expiresIn: '1h' } // Expiración del token, por ejemplo, 1 hora
         );
+
+
+         // Generate a random code
+        const randomCode = crypto.randomBytes(8).toString('hex'); // Generates a random 8-character code
+
+        // Insert login record into the database
+        await db.query(
+            'INSERT INTO historial_ingresos (id_usuario, fecha, codigo) VALUES (?, NOW(), ?)',
+            [user.id, randomCode]
+        );
+    
 
         // Devolver la respuesta con el token
         res.status(200).json({ 
