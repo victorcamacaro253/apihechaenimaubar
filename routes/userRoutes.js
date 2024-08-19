@@ -14,6 +14,8 @@ router.get('/users/searchUser',userController.searchUsers);
 
 router.post('/users',userController.addUser);
 
+router.post('/users/login', userController.loginUser);
+
 router.get('/users/:id',userController.getUserById);
 
 router.put('/users/:id', userController.updateUser);
