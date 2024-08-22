@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
+
 // Obtener todos los usuarios
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
@@ -348,6 +349,33 @@ const loginUser = async (req, res) => {
     }
 };
 
+
+
+const getPerfil = async (req, res) => {
+    try {
+        // Verifica si `req.user` existe y tiene la propiedad `id`
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ error: 'Usuario no autenticado' });
+        }
+
+        const userId = req.user.id;
+
+        // Consultar el perfil del usuario en la base de datos
+        const [results] = await db.query('SELECT id, nombre, correo FROM usuario WHERE id = ?', [userId]);
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Perfil no encontrado' });
+        }
+
+        // Enviar el perfil del usuario como respuesta
+        res.status(200).json({ perfil: results[0] });
+
+    } catch (err) {
+        console.error('Error obteniendo el perfil:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
 module.exports = {
     getAllUser,
     getUserById,
@@ -356,5 +384,6 @@ module.exports = {
     deleteUser,
     partialUpdateUser,
     searchUsers,
-    loginUser
+    loginUser,
+    getPerfil
 };
