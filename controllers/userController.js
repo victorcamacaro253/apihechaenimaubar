@@ -376,6 +376,44 @@ const getPerfil = async (req, res) => {
     }
 };
 
+
+const getProducts = async (req,res)=>{
+    res.header('Access-Control-Allow-Origin','*')
+    try {
+        const [results] = await db.query('SELECT * FROM `productos` INNER JOIN categorias on productos.id_categoria=categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor=proveedor.id_proveedor');
+        res.json(results);
+    } catch (err) {
+        console.error('Error ejecutando la consulta:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+
+
+}
+
+
+const getProductById = async (req,res)=>{
+    const {id}= req.params
+
+    try{
+
+        const [results] = await db.query('SELECT * FROM `productos` WHERE id_producto = ?',[id])
+        
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        res.json(results[0]);
+
+    }catch(err){
+
+    }
+
+
+
+
+}
+
+
 module.exports = {
     getAllUser,
     getUserById,
@@ -385,5 +423,7 @@ module.exports = {
     partialUpdateUser,
     searchUsers,
     loginUser,
-    getPerfil
+    getPerfil,
+    getProducts,
+    getProductById
 };
