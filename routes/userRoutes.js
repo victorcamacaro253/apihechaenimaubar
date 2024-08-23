@@ -10,15 +10,15 @@ router.get('/users',userController.getAllUser);
 
 router.get('/users/searchUser',userController.searchUsers);
 router.get('/users/getperfil',authenticateToken,userController.getPerfil)
-
+router.get('/users/getProducts',userController.getProducts);
+router.get('/users/getProductById/:id',userController.getProductById);
 //Ruta para agregar un nuevo usuario
 
-router.post('/users',userController.addUser);
+router.post('/users',authenticateToken,userController.addUser);
 
 router.post('/users/login', userController.loginUser);
 
 router.get('/users/:id',userController.getUserById);
-
 
 
 router.put('/users/:id', userController.updateUser);
