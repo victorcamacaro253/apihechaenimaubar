@@ -1,0 +1,168 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Righteous&family=Work+Sans:wght@100;300;400;600;800&display=swap');
+
+*{
+	margin:0;
+	border: 0;
+	font-family: 'Work Sans';
+
+}
+
+
+.header{
+    background-image: linear-gradient(to right,#D8DCC5,#67F7CD);
+    width: 100%;
+}
+.header-title {
+    font-family: 'Poppins', sans-serif;
+    font-size: 20px; /* Increase the size */
+    font-weight: 600; /* Semi-bold for better visibility */
+    letter-spacing: 1.5px; /* Adds spacing between letters */
+    text-transform: uppercase; /* Converts text to uppercase */
+    background: linear-gradient(to right, #30cfd0, #330867); /* Gradient text color */
+    -webkit-background-clip: text; /* Clips the background to the text */
+    color: transparent; /* Makes the text transparent to reveal the gradient */
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Adds a subtle shadow */
+    margin-left: 20px; /* Space between image and text */
+    margin-right: 20px; /* Space between text and next image */
+}
+
+.profile{
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 2px solid #007BFF;
+    background: linear-gradient(135deg, #007BFF, #00C6FF);
+    padding: 4px;
+    transition: filter 0.3s ease, transform 0.3s ease;
+}
+.profile:hover {
+    filter: brightness(1.2);
+    transform: translateY(-5px);
+}
+
+footer{
+    background-image: linear-gradient(to right,#D8DCC5,#67F7CD);
+    color: #fff;
+    padding: 5px 0;
+    text-align: center;
+    position: relative;
+    width: 100%;
+	
+}
+footer .info ul {
+    padding: 0; /* Remove default padding */
+    list-style: none; /* Remove bullet points */
+	margin-left: 25px;
+	margin-top: 5px;
+}
+
+footer .info li {
+    color: #252a2e;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-family: 'Roboto', sans-serif; /* Use a clean, modern font */
+    font-size: 16px; /* Adjust font size for better readability */
+    padding: 5px 10px; /* Add padding for a more structured look */
+    border-radius: 5px; /* Round the corners slightly */
+    background-color: rgba(255, 255, 255, 0.8); /* Add a light background color */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    transition: background-color 0.3s ease; /* Smooth transition effect */
+}
+
+footer .info li:hover {
+    background-color: #f0f0f0; /* Change background on hover */ }
+
+footer .info li i {
+	margin-right: 10px; /* Space between icon and text */
+    color: #1CB698; /* Icon color */
+    font-size: 20px; /* Adjust icon size */
+}
+footer .redes{
+    margin-bottom: 0px;
+}
+footer .redes {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+footer .redes a {
+    color: #252a2e;
+    display: inline-block;
+    text-decoration: none;
+    background-color: #fff; /* Light background for contrast */
+    border-radius: 50%;
+    width: 50px; /* Increase size for better visibility */
+    height: 50px;
+    line-height: 50px;
+    margin: 15px 10px; /* Adjust margins for spacing */
+    font-size: 22px; /* Increase icon size */
+    transition: all 0.3s ease; /* Smooth transition for hover effects */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Add shadow for depth */
+    position: relative;
+}
+
+footer .redes a::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background-color: rgba(28, 182, 152, 0.1);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+
+footer .redes a:hover::before {
+    transform: scale(1.2);
+    opacity: 1;
+}
+
+footer .redes a:hover {
+    background-color: #1CB698;
+    color: #fff;
+    transform: translateY(-5px); /* Slight lift on hover */
+    box-shadow: 0 6px 15px rgba(28, 182, 152, 0.4); /* Enhanced shadow on hover */
+}
+
+footer .redes a:hover i {
+    transform: scale(1.2); /* Slightly enlarge the icon on hover */
+}
+
+footer .arriba{
+    display: block;
+    width: 45px;
+    height: 45px;
+    background-color: #1CB698;
+    color: #fff;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: -25px;
+    border-radius: 50%;
+    line-height: 50px;
+    font-size: 18px;
+}
+
+
+	@media (max-width: 768px) {
+		.header{
+			width: 100%;
+		}
+		footer {
+			flex-direction: column;
+		}
+		footer .info {
+			margin-bottom: 20px;
+			width: 100%;
+		}
+		footer .redes {
+			justify-content: center;
+		}
+	}
+
