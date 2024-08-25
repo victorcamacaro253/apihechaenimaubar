@@ -3,32 +3,34 @@ const bcrypt = require('bcrypt');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-
+const userModel = require('../models/userModels');
 
 // Obtener todos los usuarios
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
     try {
-        const [results] = await db.query('SELECT * FROM usuario');
+        const [results] = await userModel.getAllUsers();
         res.json(results);
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
-
 // Obtener un usuario por ID
 const getUserById = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const [results] = await db.query('SELECT * FROM usuario WHERE id = ?', [id]);
+        // Llama al método del modelo, que devuelve un solo objeto de usuario
+        const user = await userModel.getUserById(id);
 
-        if (results.length === 0) {
+        // Verifica si se encontró el usuario
+        if (!user) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
-        res.json(results[0]);
+        // Envía el usuario encontrado
+        res.json(user);
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -55,8 +57,11 @@ const addUser = async (req, res) => {
 
     try {
         // Verificar si el usuario ya existe
-        const [existingUser] = await connection.query('SELECT * FROM usuario WHERE cedula = ?', [cedula]);
-        if (existingUser.length > 0) {
+       // const [existingUser] = await connection.query('SELECT * FROM usuario WHERE cedula = ?', [cedula]);
+       
+       const existingUser = await userModel.existingCedula(connection, cedula);
+       
+       if (existingUser.length > 0) {
             await connection.rollback(); // Deshacer la transacción
             return res.status(400).json({ error: 'Usuario ya existe' });
         }
@@ -65,15 +70,13 @@ const addUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Consulta SQL para insertar el usuario
-        const [results] = await connection.query(
-            'INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña) VALUES (?, ?, ?, ?, ?)', 
-            [name, apellido, cedula, email, hashedPassword]
-        );
+        const result = await userModel.addUser(connection, name, apellido, cedula, email, hashedPassword);
+
 
         // Confirmar transacción
         await connection.commit();
 
-        res.status(201).json({ id: results.insertId, name, email });
+        res.status(201).json({ id: result.insertId, name, email });
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
         await connection.rollback(); // Deshacer la transacción en caso de error
@@ -84,12 +87,11 @@ const addUser = async (req, res) => {
 };
 
 
-// Actualizar un usuario por ID
 const updateUser = async (req, res) => {
     const { id } = req.params;
-    const { name, apellido ,cedula , email, password } = req.body;
+    const { name, apellido, cedula, email, password } = req.body;
 
-    if (!name && !apellido && !email && !password ) {
+    if (!name && !apellido && !email && !password) {
         return res.status(400).json({ error: 'No hay datos para actualizar' });
     }
 
@@ -112,25 +114,22 @@ const updateUser = async (req, res) => {
             values.push(cedula);
         }
 
-
         if (email) {
             updateFields.push('correo = ?');
             values.push(email);
         }
+        
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
             updateFields.push('contraseña = ?');
             values.push(hashedPassword);
         }
 
-        values.push(id);
-
         if (updateFields.length === 0) {
             return res.status(400).json({ error: 'No hay datos para actualizar' });
         }
 
-        const query = `UPDATE usuario SET ${updateFields.join(', ')} WHERE id = ?`;
-        const [results] = await db.query(query, values);
+        const results = await userModel.updateUser(id, updateFields,values);
 
         if (results.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -231,56 +230,28 @@ const partialUpdateUser = async (req, res) => {
     }
 };
 
+const searchUsers = async (req, res) => {
+    const { name, apellido, cedula } = req.query; // Usa req.query para parámetros GET
 
-const searchUsers = async (req,res)=>{
-    const {name,apellido,cedula} = req.query; //Usa req.query para parametros GET
-
-    //configurar encabezado CORS
-    res.header('Access-Control-Allow-Origin','*')
-    res.header('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS')
-    res.header('Access-Control-Allow-Headers','Content-Type')
+    // Configurar encabezado CORS
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
-        return res.sendStatus(204)
-        
+        return res.sendStatus(204);
     }
 
-    try{
-    //Se construye la consulta SQL
+    try {
+        // Llamar a la función del modelo
+        const results = await userModel.searchUsers({ name, apellido, cedula });
 
-    let query = 'SELECT * FROM usuario WHERE 1=1 ' // 1=1 para simplificar la concatenacion
-    let params = []
-
-    if (name) {
-        query += 'AND nombre LIKE ? ';
-        params.push(`%${name}%`);
-        
+        res.status(200).json(results);
+    } catch (err) {
+        console.error('Error ejecutando la consulta', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
-
-    if (apellido) {
-        query += 'AND apellido LIKE ? ';
-        params.push(`%${apellido}%`);
-        
-    }
-
-    if (cedula) {
-        query += 'AND cedula LIKE ? ';
-        params.push(cedula);
-        
-    }
-    
-    //ejecuta la consulta de la base de datos 
-    const [results] = await db.query(query,params)
-
-    res.status(200).json(results)
-
-    
-    }catch (err){
-
-        console.error('Error ejecutando la consulta',err)
-        res.status(500).json({error:'Error interno del sevidor'})
-    }
-}
+};
 
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
@@ -304,13 +275,13 @@ const loginUser = async (req, res) => {
 
     try {
         // Buscar al usuario en la base de datos
-        const [results] = await db.query('SELECT * FROM usuario WHERE correo = ?', [email]);
+        const user = await userModel.findByEmail(email);
+       
 
-        if (results.length === 0) {
+        if (!user) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
-        const user = results[0];
 
         // Comparar la contraseña proporcionada con la almacenada en la base de datos
         const match = await bcrypt.compare(password, user.contraseña);
@@ -331,10 +302,8 @@ const loginUser = async (req, res) => {
         const randomCode = crypto.randomBytes(8).toString('hex'); // Generates a random 8-character code
 
         // Insert login record into the database
-        await db.query(
-            'INSERT INTO historial_ingresos (id_usuario, fecha, codigo) VALUES (?, NOW(), ?)',
-            [user.id, randomCode]
-        );
+        await userModel.insertLoginRecord(user.id, randomCode);
+
     
 
         // Devolver la respuesta con el token
@@ -377,41 +346,8 @@ const getPerfil = async (req, res) => {
 };
 
 
-const getProducts = async (req,res)=>{
-    res.header('Access-Control-Allow-Origin','*')
-    try {
-        const [results] = await db.query('SELECT * FROM `productos` INNER JOIN categorias on productos.id_categoria=categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor=proveedor.id_proveedor');
-        res.json(results);
-    } catch (err) {
-        console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
 
 
-}
-
-
-const getProductById = async (req,res)=>{
-    const {id}= req.params
-
-    try{
-
-        const [results] = await db.query('SELECT * FROM `productos` WHERE id_producto = ?',[id])
-        
-        if (results.length === 0) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
-        }
-
-        res.json(results[0]);
-
-    }catch(err){
-
-    }
-
-
-
-
-}
 
 
 module.exports = {
@@ -424,6 +360,5 @@ module.exports = {
     searchUsers,
     loginUser,
     getPerfil,
-    getProducts,
-    getProductById
+    
 };
