@@ -1,9 +1,9 @@
-const express = require('express')
-const userRoutes = require('./routes/userRoutes')
+import express, { json } from 'express';
+import userRoutes from './routes/userRoutes.js';
 const app = express();
 
 
-app.use(express.json());
+app.use(json());
 app.disable('x-powered-by')
 
 app.get('/',(req,res)=>{
