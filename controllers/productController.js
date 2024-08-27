@@ -1,4 +1,5 @@
-const db = require('../db/db1'); // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
+import { query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
+import crypto from 'crypto'; // Importa crypto si lo necesitas
 
 
 
@@ -6,7 +7,7 @@ const getProducts = async (req,res)=>{
     res.header('Access-Control-Allow-Origin','*')
 
     try{
-        const [results] = await db.query('SELECT * FROM productos INNER JOIN categorias on productos.id_categoria=categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor=proveedor.id_proveedor')
+        const [results] = await query('SELECT * FROM productos INNER JOIN categorias on productos.id_categoria=categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor=proveedor.id_proveedor')
 
         res.json(results)
 
@@ -23,7 +24,7 @@ const getProductsById = async (req,res) =>{
     const {id} = req.params
 
     try{
-        const [results] =  await db.query('SELECT * FROM productos INNER JOIN categorias on productos.id_categoria=categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor=proveedor.id_proveedor WHERE id_producto=?',[id]);
+        const [results] =  await query('SELECT * FROM productos INNER JOIN categorias on productos.id_categoria=categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor=proveedor.id_proveedor WHERE id_producto=?',[id]);
         
         if (results.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -64,7 +65,7 @@ const addProduct = async (req,res)=>{
 
     
     // Iniciar transacción
-    const connection = await db.getConnection();
+    const connection = await pool.getConnection();
     await connection.beginTransaction();
 
     try {
@@ -99,9 +100,9 @@ const addProduct = async (req,res)=>{
 }
 
 
-module.exports = {
+export {
     getProducts,
     getProductsById,
     addProduct
 
-}
+};
