@@ -1,43 +1,50 @@
 import { query as _query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import { hash, compare } from 'bcrypt';
+import {randomBytes} from 'crypto';
 import { validationResult } from 'express-validator';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
-import userModel from '../models/userModels.js';
+import UserModel from '../models/userModels.js'
 
 
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
     try {
-        const [results] = await _query('SELECT * FROM usuario');
+        const results = await _query('SELECT * FROM usuario');
+
         res.json(results);
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(500).json({ error: 'Error interno del servidor 1' });
     }
 };
-
-// Obtener un usuario por ID
 const getUserById = async (req, res) => {
     const { id } = req.params;
 
     try {
-        // Llama al método del modelo, que devuelve un solo objeto de usuario
-        const user = await _getUserById(id);
+        // Llama al método del modelo para obtener el usuario por ID
+        const user = await UserModel.getUserById(id);
 
         // Verifica si se encontró el usuario
         if (!user) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+            // Usuario no encontrado, responde con un error 404
+            return res.status(404).json({ 
+                error: 'Usuario no encontrado', 
+                message: `No se pudo encontrar un usuario con el ID proporcionado: ${id}` 
+            });
         }
 
-        // Envía el usuario encontrado
+        // Envía el usuario encontrado como respuesta
         res.json(user);
     } catch (err) {
+        // Maneja cualquier error que pueda ocurrir durante la consulta
         console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(500).json({ 
+            error: 'Error interno del servidor', 
+            message: 'Se produjo un error inesperado en el servidor. Por favor, inténtelo de nuevo más tarde.' 
+        });
     }
 };
-
 // Agregar un nuevo usuario
 const addUser = async (req, res) => {
     const { name, apellido, cedula, email, password } = req.body;
@@ -54,7 +61,7 @@ const addUser = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const existingUser = await _query('SELECT * FROM usuario WHERE cedula = ?', [cedula]);
+        const existingUser = await UserModel.existingCedula(cedula)
 
         if (existingUser.length > 0) {
             await connection.rollback();
@@ -62,7 +69,7 @@ const addUser = async (req, res) => {
         }
 
         const hashedPassword = await hash(password, 10);
-        const result = await userModel.addUser(connection, name, apellido, cedula, email, hashedPassword);
+        const result = await UserModel.addUser(connection, name, apellido, cedula, email, hashedPassword);
 
         await connection.commit();
         res.status(201).json({ id: result.insertId, name, email });
@@ -245,17 +252,15 @@ const searchUsers = async (req, res) => {
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
-
-    
-      // Configurar encabezados CORS
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type');
+    // Configurar encabezados CORS
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
   
-      // Manejar solicitudes OPTIONS para preflight
-      if (req.method === 'OPTIONS') {
-          return res.sendStatus(204);
-      }
+    // Manejar solicitudes OPTIONS para preflight
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
 
     // Validación de entrada
     if (!email || !password) {
@@ -264,13 +269,11 @@ const loginUser = async (req, res) => {
 
     try {
         // Buscar al usuario en la base de datos
-        const user = await findByEmail(email);
-       
-
+        const results = await UserModel.findByEmail(email)
+        const user = results[0]; // Asegúrate de que results sea un array y toma el primer elemento
         if (!user) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
-
 
         // Comparar la contraseña proporcionada con la almacenada en la base de datos
         const match = await compare(password, user.contraseña);
@@ -281,19 +284,17 @@ const loginUser = async (req, res) => {
 
         // Generar un token JWT
         const token = sign(
-            { id: user.id, email: user.correo },
+            { id: user.id, correo: user.correo },
             process.env.JWT_SECRET, // Asegúrate de tener JWT_SECRET en tus variables de entorno
             { expiresIn: '1h' } // Expiración del token, por ejemplo, 1 hora
         );
 
+        // Generar un código aleatorio
+        const randomCode = randomBytes(8).toString('hex'); // Genera un código aleatorio de 8 caracteres
 
-         // Generate a random code
-        const randomCode = randomBytes(8).toString('hex'); // Generates a random 8-character code
-
-        // Insert login record into the database
-        await insertLoginRecord(user.id, randomCode);
-
-    
+        // Insertar registro de inicio de sesión en la base de datos
+        UserModel.insertLoginRecord( user.id, randomCode)
+       
 
         // Devolver la respuesta con el token
         res.status(200).json({ 
@@ -303,7 +304,7 @@ const loginUser = async (req, res) => {
 
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(500).json({ error: 'Error interno del servidor. Intenta de nuevo más tarde.' });
     }
 };
 
@@ -334,10 +335,73 @@ const getPerfil = async (req, res) => {
     }
 };
 
+/*
+const getcorreo = async (req, res) => {
+    const { email, password } = req.body;
 
+    // Configurar encabezados CORS
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
 
+    // Manejar solicitudes OPTIONS para preflight
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
 
+    try {
+        // Validación de entrada
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Correo electrónico y contraseña son requeridos' });
+        }
 
+        // Consulta para obtener el usuario basado en el correo electrónico
+       const results = await UserModel.findByEmail(email)
+        const user = results[0]; // Asegúrate de que `user` se defina correctamente
+
+        console.log('Resultados de la consulta:', results); // Verifica los resultados
+
+        if (!user) {
+            return res.status(404).json({ error: 'Correo no encontrado' });
+        }
+
+        // Comparar la contraseña proporcionada con la almacenada en la base de datos
+        const match = await compare(password, user.contraseña);
+
+        if (!match) {
+            return res.status(401).json({ error: 'Contraseña incorrecta' });
+        }
+
+        // Generar un token JWT
+        const token = sign(
+            { id: user.id, correo: user.correo },
+            process.env.JWT_SECRET, // Asegúrate de tener JWT_SECRET en tus variables de entorno
+            { expiresIn: '1h' } // Expiración del token, por ejemplo, 1 hora
+        );
+
+        // Generar un código aleatorio
+        const randomCode = randomBytes(8).toString('hex'); // Genera un código aleatorio de 8 caracteres
+
+        // Insertar registro de inicio de sesión en la base de datos
+        await _query(
+            'INSERT INTO historial_ingresos (id_usuario, fecha, codigo) VALUES (?, NOW(), ?)',
+            [user.id, randomCode]
+        );
+
+        // Devolver la respuesta con el token
+        res.status(200).json({
+            message: 'Inicio de sesión exitoso',
+            token
+        });
+
+    } catch (err) {
+        console.error('Error haciendo el login:', err.message || err);
+        console.error('Error haciendo el login:', err);
+        res.status(500).json({ error: 'Error interno del servidor. Intenta de nuevo más tarde.' });
+    }
+};
+
+*/
 
 export default {
     getAllUser,
@@ -348,6 +412,6 @@ export default {
     partialUpdateUser,
     searchUsers,
     loginUser,
-    getPerfil,
+    getPerfil
     
 };
