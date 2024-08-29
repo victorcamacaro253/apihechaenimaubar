@@ -338,8 +338,9 @@ const getPerfil = async (req, res) => {
 
 
 const getUserPerfil= async (req,res) => {
-    const { id } = req.params;
-    console.log('req.params:', req.params); 
+    console.log('req.params:', req.params);
+const id = req.params.id;
+    
 
     if (!id) {
         return res.status(400).json({ error: 'ID del usuario es requerido' });
@@ -351,7 +352,8 @@ const getUserPerfil= async (req,res) => {
         
        
         // Consultar el perfil del usuario en la base de datos
-        const results = await getUserPerfil(id);
+        const results = await _query('SELECT * FROM usuario WHERE id = ?', [id]);
+
 
         if (results.length === 0) {
             return res.status(404).json({ error: 'Perfil no encontrado' });
