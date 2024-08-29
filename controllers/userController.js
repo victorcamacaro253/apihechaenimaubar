@@ -126,7 +126,7 @@ const updateUser = async (req, res) => {
             return res.status(400).json({ error: 'No hay datos para actualizar' });
         }
 
-        const results = await _updateUser(id, updateFields,values);
+        const results = await UserModel.updateUser(id, updateFields,values);
 
         if (results.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -156,7 +156,7 @@ const deleteUser = async (req, res) => {
 
 
     try {
-        const [result] = await _query('DELETE FROM usuario WHERE id = ?', [id]);
+        const result = await UserModel.deleteUser(id);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -241,9 +241,10 @@ const searchUsers = async (req, res) => {
 
     try {
         // Llamar a la función del modelo
-        const results = await _searchUsers({ name, apellido, cedula });
+        const results = await UserModel.searchUsers({ name, apellido, cedula });
 
-        res.status(200).json(results);
+        res.status(200).json({results});
+        
     } catch (err) {
         console.error('Error ejecutando la consulta', err);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -318,23 +319,53 @@ const getPerfil = async (req, res) => {
             return res.status(401).json({ error: 'Usuario no autenticado' });
         }
 
-        const userId = req.user.id;
 
         // Consultar el perfil del usuario en la base de datos
-        const [results] = await _query('SELECT id, nombre, correo FROM usuario WHERE id = ?', [userId]);
+        const results = await UserModel.getPerfil();
 
         if (results.length === 0) {
             return res.status(404).json({ error: 'Perfil no encontrado' });
         }
 
         // Enviar el perfil del usuario como respuesta
-        res.status(200).json({ perfil: results[0] });
+        res.status(200).json(results);
 
     } catch (err) {
         console.error('Error obteniendo el perfil:', err);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
+
+
+const getUserPerfil= async (req,res) => {
+    const { id } = req.params;
+    console.log('req.params:', req.params); 
+
+    if (!id) {
+        return res.status(400).json({ error: 'ID del usuario es requerido' });
+    }
+
+
+
+    try {
+        
+       
+        // Consultar el perfil del usuario en la base de datos
+        const results = await getUserPerfil(id);
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Perfil no encontrado' });
+        }
+   
+        // Enviar el perfil del usuario como respuesta
+        res.status(200).json(results);
+
+    } catch (err) {
+        console.error('Error obteniendo el perfil:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+
+}
 
 /*
 const getcorreo = async (req, res) => {
@@ -413,6 +444,7 @@ export default {
     partialUpdateUser,
     searchUsers,
     loginUser,
-    getPerfil
+    getPerfil,
+    getUserPerfil
     
 };
