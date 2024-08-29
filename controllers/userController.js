@@ -61,7 +61,7 @@ const addUser = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const existingUser = await UserModel.existingCedula(cedula)
+        const existingUser = await UserModel.existingCedula(connection,cedula)
 
         if (existingUser.length > 0) {
             await connection.rollback();
@@ -75,6 +75,7 @@ const addUser = async (req, res) => {
         res.status(201).json({ id: result.insertId, name, email });
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
+        
         await connection.rollback();
         res.status(500).json({ error: 'Error interno del servidor' });
     } finally {
