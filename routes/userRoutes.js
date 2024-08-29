@@ -10,11 +10,12 @@ import { getProducts, getProductsById, addProduct } from '../controllers/product
 router.get('/users',userController.getAllUser);
 
 router.get('/users/searchUser',userController.searchUsers);
-router.get('/users/getperfil',authenticateToken,userController.getPerfil)
+router.get('/users/getperfil',authenticateToken ,userController.getPerfil)
+
 
 router.get('/users/getProducts',getProducts)
 router.get('/users/getProducts/:id',getProductsById)
-
+router.get('/users/getUserPerfil/:id',userController.getUserPerfil)
 
 //Ruta para agregar un nuevo usuario
 
