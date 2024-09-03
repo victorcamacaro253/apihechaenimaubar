@@ -1,15 +1,15 @@
-const db = require('../db/db1');
-const bcrypt = require('bcrypt');
+import { query as _query,pool } from '../db/db1.js';
+import bcrypt from 'bcrypt';
 
 const UserModel = {
 
     async getAllUsers() {
-        const [results] = await db.query('SELECT * FROM usuario');
+        const results = await _query('SELECT * FROM usuario');
         return results;
     },
 
     async getUserById(id) {
-        const [results] = await db.query('SELECT * FROM usuario WHERE id = ?', [id]);
+        const results = await _query('SELECT * FROM usuario WHERE id = ?', [id]);
         return results.length ? results[0] : null;
     },
 
@@ -34,7 +34,7 @@ async updateUser(id, updateFields, values) {
     const finalValues = values.concat(id);
 
     // Ejecutar la consulta
-    const [results] = await db.query(query, finalValues);
+    const [results] = await _query(query, finalValues);
 
     return results; // Retornar el resultado de la consulta
 },
@@ -62,7 +62,7 @@ async searchUsers({ name, apellido, cedula }) {
     }
 
     // Ejecutar la consulta
-    const [results] = await db.query(query, params);
+    const [results] = await _query(query, params);
 
     return results; // Retornar los resultados de la consulta
 },
@@ -71,21 +71,37 @@ async searchUsers({ name, apellido, cedula }) {
 
 
     async deleteUser(id) {
-        const [result] = await db.query('DELETE FROM usuario WHERE id = ?', [id]);
+        const [result] = await _query('DELETE FROM usuario WHERE id = ?', [id]);
         return result.affectedRows;
     },
 
     async insertLoginRecord(userId, code) {
-        await db.query(
+        await _query(
             'INSERT INTO historial_ingresos (id_usuario, fecha, codigo) VALUES (?, NOW(), ?)',
             [userId, code]
         );
     },
 
     async findByEmail(email) {
-        const [results] = await db.query('SELECT * FROM usuario WHERE correo = ?', [email]);
+        const results = await _query('SELECT * FROM usuario WHERE correo = ?', [email]);
         return results.length ? results[0] : null;
-    }
+    },
+
+
+async getPerfil(){
+    const results= await _query('SELECT nombre,apellido,cedula FROM usuario');
+    return results;
+},
+
+async getUserPerfil(id){
+    const result= await _query('SELECT * FROM usuario WHERE id=?',[id])
+    return result;
+}
+
+
 };
 
-module.exports = UserModel;
+
+
+
+export default UserModel;
