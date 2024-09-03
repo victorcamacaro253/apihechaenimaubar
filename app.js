@@ -1,8 +1,12 @@
 import express, { json } from 'express';
 import userRoutes from './routes/userRoutes.js';
+import rateLimit from 'express-rate-limit';
+
+
 const app = express();
 
 
+app.use(rateLimit);
 app.use(json());
 app.disable('x-powered-by')
 
