@@ -1,8 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const userController = require('../controllers/userController');
-const authenticateToken = require('../middleware/authenticationToken');
-const productController = require('../controllers/productController');
+import { Router } from 'express';
+const router = Router();
+import userController from '../controllers/userController.js';
+import authenticateToken from '../middleware/authenticationToken.js';
+import productController from '../controllers/productController.js';
 
 
 //Ruta para obtener los datos de la base de datos
@@ -10,11 +10,12 @@ const productController = require('../controllers/productController');
 router.get('/users',userController.getAllUser);
 
 router.get('/users/searchUser',userController.searchUsers);
-router.get('/users/getperfil',authenticateToken,userController.getPerfil)
+router.get('/users/getperfil',authenticateToken ,userController.getPerfil)
 
-router.get('/users/getProducts',productController.getProducts)
-router.get('/users/getProducts/:id',productController.getProductsById)
 
+router.get('/products',productController.getProducts)
+router.get('/products/:id',productController.getProductsById)
+router.get('/users/getUserPerfil/:id',authenticateToken ,userController.getUserPerfil)
 
 //Ruta para agregar un nuevo usuario
 
@@ -24,14 +25,17 @@ router.post('/users/login', userController.loginUser);
 
 router.get('/users/:id',userController.getUserById);
 
-router.post('/users/addProduct',productController.addProduct);
+router.post('/products',productController.addProduct);
 
 router.put('/users/:id', userController.updateUser);
+
+router.put('/products/:id',productController.updateProduct)
 
 router.delete('/users/:id', userController.deleteUser);
 
 router.patch('/users/:id', userController.partialUpdateUser)
 
+router.delete('/products/:id',productController.deleteProduct)
 
 
-module.exports = router;
+export default router;
