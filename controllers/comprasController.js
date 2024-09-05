@@ -1,5 +1,6 @@
 import { pool } from '../db/db1.js'; // Asegúrate de que 'pool' es una instancia de conexión que soporte promesas
 import comprasModel from '../models/comprasModel.js';
+import ProductModel from '../models/productModel.js';
 
   const compraProduct= async (req,res)=>{
 
@@ -21,7 +22,7 @@ import comprasModel from '../models/comprasModel.js';
 
    try { 
     
-    const stock = await comprasModel.getProductStock(connection, id_producto);
+    const stock = await ProductModel.getProductStock(connection, id_producto);
 
     if(stock< cantidadNum){
         await connection.rollback(); // Deshacer la transacción
@@ -31,7 +32,7 @@ import comprasModel from '../models/comprasModel.js';
     const addCompra = comprasModel.addCompra(connection,id_producto,cantidadNum,id_usuario)
 
     const newStock =stock - cantidadNum;
-    await comprasModel.updateProductStock(connection,id_producto,newStock);
+    await ProductModel.updateProductStock(connection,id_producto,newStock);
 
     await connection.commit();
 

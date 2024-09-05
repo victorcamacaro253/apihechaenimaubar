@@ -1,7 +1,6 @@
 import { query as _query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
-import { validationResult } from 'express-validator';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
 import UserModel from '../models/userModels.js'
@@ -272,7 +271,7 @@ const loginUser = async (req, res) => {
     try {
         // Buscar al usuario en la base de datos
         const results = await UserModel.findByEmail(email)
-        const user = results; // Asegúrate de que results sea un array y toma el primer elemento
+        const user = results[0]; // Asegúrate de que results sea un array y toma el primer elemento
         if (!user) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
@@ -352,7 +351,7 @@ const id = req.params.id;
         
        
         // Consultar el perfil del usuario en la base de datos
-        const results = await _query('SELECT * FROM usuario WHERE id = ?', [id]);
+        const results = await UserModel.getUserPerfil(id);
 
 
         if (results.length === 0) {
