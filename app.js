@@ -1,8 +1,12 @@
 import express, { json } from 'express';
 import userRoutes from './routes/userRoutes.js';
+import limiter from './rateLimiter.js';
+
+
 const app = express();
 
 
+app.use(limiter);
 app.use(json());
 app.disable('x-powered-by')
 
@@ -21,7 +25,7 @@ app.options('/api/users/:id', (req, res) => {
 app.use('/api',userRoutes);
 
 
-const PORT = process.env.PORT ?? 3000
+const PORT = process.env.PORT ?? 3001
 
 app.listen(PORT, ()=>{
     console.log(`Server running on port ${PORT}`)
