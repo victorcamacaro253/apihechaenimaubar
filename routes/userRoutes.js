@@ -12,10 +12,20 @@ router.get('/users',userController.getAllUser);
 router.get('/users/searchUser',userController.searchUsers);
 router.get('/users/getperfil',authenticateToken ,userController.getPerfil)
 
+router.get('/users/export/name',userController.exportUsersDataByName)
+
+router.get('/users/loginHistorial',userController.getLoginHistory)
+
+router.get('/users/export/:id', userController.exportUserData);
+
+router.get('/users/export', userController.exportUsersData);
+
 
 router.get('/Products',productController.getProducts)
 router.get('/Products/:id',productController.getProductsById)
 router.get('/users/getUserPerfil/:id',userController.getUserPerfil)
+
+router.get('/users/pagination',userController.getUsersWithPagination)
 
 //Ruta para agregar un nuevo usuario
 
@@ -35,6 +45,7 @@ router.delete('/users/:id', userController.deleteUser);
 router.delete('/products/:id',productController.deleteProduct)
 
 router.patch('/users/:id', userController.partialUpdateUser)
+
 
 
 
