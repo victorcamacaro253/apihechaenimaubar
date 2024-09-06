@@ -368,6 +368,98 @@ const id = req.params.id;
 
 }
 
+
+const getLoginHistory = async (req,res)=>{
+   // const {id} = req.params;
+   const{ nombre } =req.query
+    try {
+       // const result= await UserModel.getLoginHistory(id)
+
+
+       const result= await UserModel.getLoginHistory(nombre);
+
+           // Verifica si se encontró el usuario
+           if (!result) {
+            // Usuario no encontrado, responde con un error 404
+            return res.status(404).json({ 
+                error: 'Usuario no encontrado', 
+                message: `No se pudo encontrar un usuario con el nombre proporcionado: ${nombre}` 
+            });
+        }
+        
+        res.json(result);
+    } catch (error) {
+        console.error('Error al obtener el historial de ingresos',error);
+        res.status(500).json({error:'Error interno del servidor',error})
+    }
+}
+
+
+const getUsersWithPagination = async (req,res)=>{
+    const {page= 1,limit=10}= req.query
+    const offset= (page - 1 ) * limit;
+    
+    try {
+        const result = await UserModel.getUsersWithPagination(limit,offset);
+        res.status(200).json(result)
+
+    } catch (error) {
+        console.error('Error al obtener la paginacion',error)
+        res.status(500).json({Error:'Error interno del servidor',error})
+    }
+}
+
+// Controller to export user data to Excel
+const exportUserData = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const excelBuffer = await UserModel.exportUserData(id);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a Excel:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
+// Controller to export user data to Excel
+const exportUsersData = async (req, res) => {
+   
+
+    try {
+        const excelBuffer = await UserModel.exportUsersData();
+
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a Excel:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
+
+// Controller to export user data to Excel
+const exportUsersDataByName = async (req, res) => {
+   const {nombre} =req.query
+
+    try {
+        const excelBuffer = await UserModel.exportUsersDataByName(nombre);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a Excel:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
 /*
 const getcorreo = async (req, res) => {
     const { email, password } = req.body;
@@ -446,6 +538,10 @@ export default {
     searchUsers,
     loginUser,
     getPerfil,
-    getUserPerfil
-    
+    getUserPerfil,
+    getLoginHistory,
+    getUsersWithPagination,
+    exportUserData,
+    exportUsersData,
+    exportUsersDataByName
 };
