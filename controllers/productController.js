@@ -8,7 +8,7 @@ const getProducts = async (req,res)=>{
     res.header('Access-Control-Allow-Origin','*')
 
     try{
-        const [results] = await ProductModel.getAllProducts();
+        const results = await ProductModel.getAllProducts();
 
         res.json(results)
 
