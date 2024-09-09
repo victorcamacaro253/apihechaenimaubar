@@ -1,11 +1,14 @@
 import express, { json } from 'express';
 import userRoutes from './routes/userRoutes.js';
 import limiter from './rateLimiter.js';
+import productosRoutes from './routes/productosRoutes.js'
+import comprasRoutes from './routes/comprasRoutes.js'
+import cors from 'cors'
 
 
 const app = express();
 
-
+app.use(cors())
 app.use(limiter);
 app.use(json());
 app.disable('x-powered-by')
@@ -24,6 +27,9 @@ app.options('/api/users/:id', (req, res) => {
 //Usa las rutas de usuarios 
 app.use('/api',userRoutes);
 
+app.use('/api2',productosRoutes);
+
+app.use('/api3',comprasRoutes);
 
 const PORT = process.env.PORT ?? 3001
 
