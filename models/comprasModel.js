@@ -16,14 +16,27 @@ const comprasModel= {
         return result;
     },
 
-async addCompra(connection,id_producto,cantidad,id_usuario){
-    const [result]= await connection.query(' INSERT INTO compras (id_producto, cantidad, fecha, id_usuario) VALUES (?, ?, NOW(), ?)',
-            [id_producto, cantidad, id_usuario])
-            return result;
+async addCompra(connection,id_usuario){
+    const [result]= await connection.query(' INSERT INTO compras (fecha, id_usuario) VALUES (NOW(), ?)',
+            [id_usuario])
+      return result.insertId; 
+
+},
+/*
+async compraProduct(connection,id_compra, id_producto, cantidad, precio){
+    const result= await connection.query(' INSERT INTO productos_compras (id_compra, id_producto,cantidad,precio) VALUES (?, ?, ?, ?)',
+        [id_compra, cantidad,id_producto,precio])
+        return result;
 
 },
 
-
+*/
+ // Agregar productos a la compra
+  async compraProduct(connection, id_compra, productos) {
+    const query = 'INSERT INTO productos_compras (id_compra, id_producto, cantidad, precio) VALUES ?';
+    const values = productos.map(producto => [id_compra, producto.id_producto, producto.cantidad, producto.precio]);
+    await connection.query(query, [values]);
+  },
 
 async deleteCompra(id){
 
