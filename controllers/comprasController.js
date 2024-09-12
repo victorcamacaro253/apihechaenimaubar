@@ -46,7 +46,7 @@ res.json(result);
  }
  }
 
-
+/*
   const compraProduct= async (req,res)=>{
 
   const {id_producto,cantidad,id_usuario} =req.body
@@ -93,7 +93,74 @@ res.json(result);
 
   
 }
+  */
 
+
+const compraProduct = async (req, res) => {
+  const { id_usuario, productos } = req.body;
+
+  if (!id_usuario || !productos || !Array.isArray(productos) || productos.length === 0) {
+    return res.status(400).json({ error: 'El usuario y al menos un producto son requeridos' });
+  }
+
+  // Validar productos
+  for (const producto of productos) {
+    const { id_producto, cantidad, precio } = producto;
+    if (!id_producto || !cantidad || !precio || isNaN(cantidad) || cantidad <= 0 || isNaN(precio) || precio <= 0) {
+      return res.status(400).json({ error: 'Datos de producto inválidos' });
+    }
+  }
+
+  // Iniciar transacción
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    // Verificar stock y preparar datos para inserción
+    const insertProductos = [];
+    for (const producto of productos) {
+      const { id_producto, cantidad, precio } = producto;
+      const stock = await ProductModel.getProductStock(connection, id_producto);
+
+      if (stock < cantidad) {
+        await connection.rollback(); // Deshacer la transacción
+        return res.status(400).json({ error: 'Stock insuficiente para el producto con id ' + id_producto });
+      }
+
+      insertProductos.push(producto);
+    }
+
+    // Insertar la compra
+    const id_compra = await comprasModel.addCompra(connection, id_usuario);
+
+
+    console.log(id_compra)
+
+    // Insertar productos en la compra
+    await comprasModel.compraProduct(connection, id_compra, insertProductos);
+
+    // Actualizar el stock del producto
+    for (const producto of insertProductos) {
+      const { id_producto, cantidad } = producto;
+      const stock = await ProductModel.getProductStock(connection, id_producto);
+      const newStock = stock - cantidad;
+      await ProductModel.updateProductStock(connection, id_producto, newStock);
+    }
+
+    // Confirmar la transacción
+    await connection.commit();
+
+    res.status(201).json({ id_compra, message: 'Compra realizada con éxito' });
+
+  } catch (err) {
+    console.error('Error ejecutando la transacción:', err);
+    await connection.rollback(); // Deshacer la transacción en caso de error
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    // Liberar la conexión
+    connection.release();
+  }
+};
 
 const deleteCompra = async (req,res) => {
  const { id } = req.params;
