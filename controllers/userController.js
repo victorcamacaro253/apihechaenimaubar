@@ -3,13 +3,27 @@ import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
-import UserModel from '../models/userModels.js'
-
+//import UserModel from '../models/userModels.js'
+import redis from '../db/redis.js'
+import UserModel from '../models/firebase/userModel_firebase.js'
 
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
     try {
+
+    // Verificar si los datos están en la caché de Redis
+    const cachedUsers = await redis.get('allUsers');
+
+    if (cachedUsers) {
+        // Si los datos están en la caché, devolverlos
+        console.log('Datos obtenidos desde Redis');
+        return res.json(JSON.parse(cachedUsers));
+    }
+
         const results = await UserModel.getAllUsers();
+
+          // Almacenar los resultados en la caché de Redis con una expiración (por ejemplo, 10 minutos)
+          await redis.setEx('allUsers', 600, JSON.stringify(results)); // 600 segundos = 10 minutos
 
         res.json(results);
     } catch (err) {
@@ -21,6 +35,16 @@ const getUserById = async (req, res) => {
     const { id } = req.params;
 
     try {
+            // Verificar si el usuario está en la caché de Redis
+             const cachedUser = await redis.get(`user:${id}`);
+             if (cachedUser) {
+                // Si el usuario está en la caché, parsear y obtener los datos
+                const user = JSON.parse(cachedUser);
+                console.log(`Datos obtenidos desde Redis: ID=${user.id}, Nombre=${user.nombre}`);
+                return res.json(user);
+            }
+    
+
         // Llama al método del modelo para obtener el usuario por ID
         const user = await UserModel.getUserById(id);
 
@@ -33,6 +57,11 @@ const getUserById = async (req, res) => {
             });
         }
 
+          // Almacenar el usuario en la caché de Redis con una expiración (por ejemplo, 5 minutos)
+          await redis.setEx(`user:${id}`, 300, JSON.stringify(user)); // 300 segundos = 5 minutos
+
+          console.log(`Datos obtenidos desde la base de datos: ID=${user.id}, Nombre=${user.nombre}`);
+
         // Envía el usuario encontrado como respuesta
         res.json(user);
     } catch (err) {
@@ -44,6 +73,8 @@ const getUserById = async (req, res) => {
         });
     }
 };
+
+
 // Agregar un nuevo usuario
 const addUser = async (req, res) => {
     const { name, apellido, cedula, email, password } = req.body;
@@ -60,7 +91,7 @@ const addUser = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const existingUser = await UserModel.existingCedula(connection,cedula)
+        const existingUser = await UserModel.existingCedula(cedula)
 
         if (existingUser.length > 0) {
             await connection.rollback();
@@ -68,10 +99,14 @@ const addUser = async (req, res) => {
         }
 
         const hashedPassword = await hash(password, 10);
-        const result = await UserModel.addUser(connection, name, apellido, cedula, email, hashedPassword);
+        const result = await UserModel.addUser( name, apellido, cedula, email, hashedPassword);
 
         await connection.commit();
-        res.status(201).json({ id: result.insertId, name, email });
+
+        await redis.setEx(`user:${result.insertId}`, 300, JSON.stringify(newUser)); // 300 segundos = 5 minutos
+
+        
+        res.status(201).json({ id: result.insertId, name });
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
         
@@ -131,6 +166,14 @@ const updateUser = async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
+        // Invalidar la caché de Redis para este usuario
+        await redis.del(`user:${id}`);
+
+
+        // Opcionalmente, podrías volver a obtener el usuario actualizado y guardarlo nuevamente en Redis
+        const updatedUser = await UserModel.getUserById(id);
+        await redis.setEx(`user:${id}`, 300, JSON.stringify(updatedUser)); // 300 segundos = 5 minutos
+
         res.status(200).json({ message: 'Usuario actualizado exitosamente' });
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
@@ -160,6 +203,10 @@ const deleteUser = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
+
+
+        // Invalida la caché de Redis para este usuario
+        await redis.del(`user:${id}`);
 
         res.status(200).json({ message: 'Usuario eliminado exitosamente' });
     } catch (err) {
@@ -239,8 +286,26 @@ const searchUsers = async (req, res) => {
     }
 
     try {
+         // Crear una clave única para la caché basada en los parámetros de búsqueda
+         const cacheKey = `searchUsers:${name || ''}:${apellido || ''}:${cedula || ''}`;
+
+         // Verificar si los resultados ya están en la caché de Redis
+         const cachedResults = await redis.get(cacheKey);
+ 
+         if (cachedResults) {
+             // Si los datos están en la caché, devolverlos
+             console.log('Datos obtenidos desde Redis');
+             return res.status(200).json({ results: JSON.parse(cachedResults) });
+         }
+ 
         // Llamar a la función del modelo
         const results = await UserModel.searchUsers({ name, apellido, cedula });
+
+        if(!results){
+            return res.status(404).json({ error: 'No se encontraron usuarios' });
+        }
+        // Almacenar los resultados en la caché de Redis con una expiración (por ejemplo, 10 minutos)
+        await redis.setEx(cacheKey, 600, JSON.stringify(results)); // 600 segundos = 10 minutos
 
         res.status(200).json({results});
         
@@ -249,7 +314,6 @@ const searchUsers = async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
-
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
 

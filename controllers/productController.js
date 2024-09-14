@@ -4,6 +4,7 @@ import ProductModel from '../models/productModel.js';
 
 
 
+
 const getProducts = async (req,res)=>{
     res.header('Access-Control-Allow-Origin','*')
 
@@ -25,7 +26,7 @@ const getProductsById = async (req,res) =>{
     const {id} = req.params
 
     try{
-        const results =  await ProductModel.getProductById(id) ;
+        const [results] =  await ProductModel.getProductById(id)
         
         if (results.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -46,7 +47,7 @@ const addProduct = async (req,res)=>{
 
     const { nombre_producto, descripcion, precio,stock,id_categoria,activo = "activo",id_proveedor } = req.body;
 
-    if (!nombre_producto || !descripcion || !precio || !stock || !id_categoria) {
+    if (!nombre_producto || !descripcion || !precio || !stock ||!id_categoria) {
         return res.status(400).json({ error: 'Todos los campos son requeridos' });
     }
 
@@ -71,17 +72,20 @@ const addProduct = async (req,res)=>{
 
     try {
         // Verificar si el usuario ya existe
-        const [existingProduct] = await ProductModel.existingProduct(connection,nombre_producto)
+        const [existingProduct] =  await ProductModel.existingProduct(connection,nombre_producto)
         if (existingProduct.length > 0) {
+            console.log('Resultado de la consulta existente:', existingProduct);
             await connection.rollback(); // Deshacer la transacción
+
             return res.status(400).json({ error: 'Producto ya existe' });
+
         }
 
         
         
 
         // Consulta SQL para insertar el iproducto
-        const [results] = await ProductModel.addProduct(connection,codigo,nombre_producto,descripcion, precioNum,stockNum,id_categoria,activo,id_proveedor)
+        const results = await ProductModel.addProduct(connection,codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor)
 
         // Confirmar transacción
         await connection.commit();
@@ -98,32 +102,121 @@ const addProduct = async (req,res)=>{
 }
 
 
+const deleteProduct = async (req,res) =>{
+const { id } = req.params
 
-const deleteProduct= async (req,res) =>{
-    const {id}=  req.params
+res.header('Access-Control-Allow-Origin', '*');
+res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+res.header('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Manejar solicitudes OPTIONS para preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+}
+
+   
+   try{
+
+    const result= await ProductModel.deleteProduct(id);
+
+    if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    res.status(200).json({ message: 'Usuario eliminado exitosamente' });
+
+   }catch(err){
+    console.error('Error ejecutando la consulta:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+   }
+}
+
+const updateProduct = async (req,res)=>{
+    const { id } = req.params;
+    const {nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor} = req.body;
+
+   try{
+    let updateFields = [];
+    let values = [];
+
+    if (nombre_producto) {
+        updateFields.push('nombre_producto = ?');
+        values.push(nombre_producto);
+    }
+
+    if (descripcion) {
+        updateFields.push('descripcion = ?');
+        values.push(descripcion);
+    }
+
+    if (precio) {
+        updateFields.push('precio = ?');
+        values.push(precio);
+    }
+
+    if (stock) {
+        updateFields.push('stock = ?');
+        values.push(stock);
+    }
+     
+    if (id_categoria) {
+        updateFields.push('id_categoria = ?');
+        values.push(id_categoria);
+    }
+
+    if (activo) {
+        updateFields.push('activo = ?');
+        values.push(activo);
+    }
+    if (id_proveedor) {
+        updateFields.push('id_proveedor = ?');
+        values.push(id_proveedor);
+    }
+
+    const results = await ProductModel.updateProduct(id, updateFields,values);
+    
+
+    if (results.affectedRows === 0) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.status(200).json({ message: 'Usuario actualizado exitosamente' });
+
+   }catch(err){
+    console.error('Error ejecutando la consulta:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+   }
+
+}
+const searchProductByName = async (req, res) => {
+    const { nombre_producto } = req.query;
+
+    if (!nombre_producto) {
+        return res.status(400).json({ error: 'El nombre del producto es requerido' });
+    }
 
     try {
+        const result = await ProductModel.searchProductByName( nombre_producto );
 
-        const result= await ProductModel.deleteProduct(id);
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Producto no encontrado' });
+        if (result.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron productos' });
         }
-
-        res.status(200).json({message:'Producto eliminado correctamente'});
-
+       console.log(result);
+        res.status(200).json(result);
     } catch (err) {
-          
         console.error('Error ejecutando la consulta:', err);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
-}
+};
+
 
 
 export default {
     getProducts,
     getProductsById,
     addProduct,
-    deleteProduct
-    
-}
+    deleteProduct,
+    searchProductByName,
+    updateProduct
+
+};
