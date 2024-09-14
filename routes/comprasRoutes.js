@@ -1,19 +1,31 @@
-import { Router } from 'express'
-import comprasController from '../controllers/comprasController.js'
-import authenticateToken from '../middleware/authenticationToken.js'
+import { Router } from 'express';
+import authenticateToken from '../middleware/authenticationToken.js';
+import comprasController from '../controllers/comprasController.js';
 
 
-const router = Router()
+const router = Router();
 
 
-router.get('/compra',comprasController.getCompras);
-
-router.get('/compra/:id',comprasController.getCompraById)
-
-router.post('/compra',comprasController.compraProduct);
+//Ruta para obtener el listado de las compras
+router.get('/compras',comprasController.getCompras);
 
 
-router.delete('/compra/:id',comprasController.deleteCompra);
+
+//Ruta para obtener las compras de un usuario
+router.get('/compras/:id',comprasController.getComprasByUsuarioId);
+
+//Ruta para obtener las compras de un usuario por su nombre
+router.get('/compras/SearchUserCompras/',comprasController.getComprasByUsuario)
 
 
-export default router;
+
+//Ruta para comprar un producto
+router.post('/compras',comprasController.compraProduct);
+
+
+//Ruta para eliminar una compra
+router.delete('/compras/:id',comprasController.deleteCompra)
+
+
+export default router
+
