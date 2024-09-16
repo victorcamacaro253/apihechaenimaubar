@@ -1,5 +1,6 @@
 import { query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import crypto from 'crypto'; // Importa crypto si lo necesitas
+import ProductModel from '../models/productModel.js';
 
 
 
@@ -7,7 +8,7 @@ const getProducts = async (req,res)=>{
     res.header('Access-Control-Allow-Origin','*')
 
     try{
-        const [results] = await query('SELECT * FROM productos INNER JOIN categorias on productos.id_categoria=categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor=proveedor.id_proveedor')
+        const results = await ProductModel.getAllProducts();
 
         res.json(results)
 
@@ -24,12 +25,12 @@ const getProductsById = async (req,res) =>{
     const {id} = req.params
 
     try{
-        const [results] =  await query('SELECT * FROM productos INNER JOIN categorias on productos.id_categoria=categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor=proveedor.id_proveedor WHERE id_producto=?',[id]);
+        const results =  await ProductModel.getProductById(id) ;
         
         if (results.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
-        res.json(results[0])
+        res.json(results)
     }catch(err){
       
         console.error('Error ejecutando la consulta:', err);
@@ -45,7 +46,7 @@ const addProduct = async (req,res)=>{
 
     const { nombre_producto, descripcion, precio,stock,id_categoria,activo = "activo",id_proveedor } = req.body;
 
-    if (!nombre_producto || !descripcion || !precio || !stock ||!id_categoria) {
+    if (!nombre_producto || !descripcion || !precio || !stock || !id_categoria) {
         return res.status(400).json({ error: 'Todos los campos son requeridos' });
     }
 
@@ -70,7 +71,7 @@ const addProduct = async (req,res)=>{
 
     try {
         // Verificar si el usuario ya existe
-        const [existingProduct] = await connection.query('SELECT nombre_producto FROM productos WHERE nombre_producto = ?', [nombre_producto]);
+        const [existingProduct] = await ProductModel.existingProduct(connection,nombre_producto)
         if (existingProduct.length > 0) {
             await connection.rollback(); // Deshacer la transacción
             return res.status(400).json({ error: 'Producto ya existe' });
@@ -80,10 +81,7 @@ const addProduct = async (req,res)=>{
         
 
         // Consulta SQL para insertar el iproducto
-        const [results] = await connection.query(
-            'INSERT INTO productos (codigo,nombre_producto,descripcion, precio,stock,id_categoria,activo, id_proveedor) VALUES ( ? , ? , ? , ? , ? , ? , ? ,?)', 
-            [codigo,nombre_producto,descripcion, precioNum,stockNum,id_categoria,activo,id_proveedor]
-        );
+        const [results] = await ProductModel.addProduct(connection,codigo,nombre_producto,descripcion, precioNum,stockNum,id_categoria,activo,id_proveedor)
 
         // Confirmar transacción
         await connection.commit();
@@ -100,9 +98,32 @@ const addProduct = async (req,res)=>{
 }
 
 
-export {
+
+const deleteProduct= async (req,res) =>{
+    const {id}=  req.params
+
+    try {
+
+        const result= await ProductModel.deleteProduct(id);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+
+        res.status(200).json({message:'Producto eliminado correctamente'});
+
+    } catch (err) {
+          
+        console.error('Error ejecutando la consulta:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}
+
+
+export default {
     getProducts,
     getProductsById,
-    addProduct
-
-};
+    addProduct,
+    deleteProduct
+    
+}

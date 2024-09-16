@@ -1,16 +1,18 @@
 import { query as _query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
-import { validationResult } from 'express-validator';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
 import UserModel from '../models/userModels.js'
+import PDFDocument from 'pdfkit';
+import { Readable } from 'stream';
+
 
 
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
     try {
-        const results = await _query('SELECT * FROM usuario');
+        const results = await UserModel.getAllUsers();
 
         res.json(results);
     } catch (err) {
@@ -352,7 +354,7 @@ const id = req.params.id;
         
        
         // Consultar el perfil del usuario en la base de datos
-        const results = await _query('SELECT * FROM usuario WHERE id = ?', [id]);
+        const results = await UserModel.getUserPerfil(id);
 
 
         if (results.length === 0) {
@@ -369,6 +371,189 @@ const id = req.params.id;
 
 }
 
+
+const getLoginHistory = async (req,res)=>{
+   // const {id} = req.params;
+   const{ nombre } =req.query
+    try {
+       // const result= await UserModel.getLoginHistory(id)
+
+
+       const result= await UserModel.getLoginHistory(nombre);
+
+           // Verifica si se encontró el usuario
+           if (!result) {
+            // Usuario no encontrado, responde con un error 404
+            return res.status(404).json({ 
+                error: 'Usuario no encontrado', 
+                message: `No se pudo encontrar un usuario con el nombre proporcionado: ${nombre}` 
+            });
+        }
+        
+        res.json(result);
+    } catch (error) {
+        console.error('Error al obtener el historial de ingresos',error);
+        res.status(500).json({error:'Error interno del servidor',error})
+    }
+}
+
+
+const getUsersWithPagination = async (req,res)=>{
+    const {page= 1,limit=10}= req.query
+    const offset= (page - 1 ) * limit;
+    
+    try {
+        const result = await UserModel.getUsersWithPagination(limit,offset);
+        res.status(200).json(result)
+
+    } catch (error) {
+        console.error('Error al obtener la paginacion',error)
+        res.status(500).json({Error:'Error interno del servidor',error})
+    }
+}
+
+// Controller to export user data to Excel
+const exportUserData = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const excelBuffer = await UserModel.exportUserData(id);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a Excel:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
+// Controller to export user data to Excel
+const exportUsersData = async (req, res) => {
+   
+
+    try {
+        const excelBuffer = await UserModel.exportUsersData();
+
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a Excel:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
+
+// Controller to export user data to Excel
+const exportUsersDataByName = async (req, res) => {
+   const {nombre} =req.query
+
+    try {
+        const excelBuffer = await UserModel.exportUsersDataByName(nombre);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a Excel:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
+const exportUserDataPdf = async(req,res)=>{
+
+    try {
+        // Simular la obtención de datos del usuario
+        const userData = await UserModel.getAllUsers();
+
+        // Crea un documento PDF
+        const doc = new PDFDocument();
+        const stream = Readable.from(doc);
+
+        // Configura las cabeceras para la descarga del PDF
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+
+        // Añadir título
+        doc.fontSize(18).text('User Data', { align: 'center' });
+        doc.moveDown();
+
+        // Configurar la tabla
+        const tableTop = 100;
+        const itemHeight = 20;
+        const tableWidth = 500;
+        const columnWidths = [100, 200, 200]; // Ejemplo de anchos para columnas
+
+        // Dibuja las cabeceras de la tabla
+        doc.fontSize(12).text('ID', 50, tableTop);
+        doc.text('Name', 150, tableTop);
+        doc.text('Email', 300, tableTop);
+
+        // Dibuja una línea horizontal debajo de las cabeceras
+        doc.moveTo(50, tableTop + itemHeight).lineTo(550, tableTop + itemHeight).stroke();
+
+        // Añadir datos a la tabla
+        let y = tableTop + itemHeight;
+        userData.forEach((user, index) => {
+            doc.text(user.id, 50, y);
+            doc.text(user.nombre, 150, y);
+            doc.text(user.apellido, 300, y);
+
+            // Dibuja una línea horizontal después de cada fila
+            doc.moveTo(50, y + itemHeight).lineTo(550, y + itemHeight).stroke();
+            y += itemHeight;
+        });
+
+        // Finaliza el PDF y envíalo como respuesta
+        doc.end();
+        stream.pipe(res);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a PDF:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+
+}
+
+const exportUserDataById = async (req,res)=>{
+    const {id}= req.params;
+
+    try {
+        // Simular la obtención de datos del usuario
+        const userData = await UserModel.getUserById(id);
+
+        // Crea un documento PDF
+        const doc = new PDFDocument();
+
+        // Usa un stream para el buffer del PDF
+        const stream = Readable.from(doc);
+
+        // Configura las cabeceras para la descarga del PDF
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+
+        // Escribe en el documento PDF
+        doc.text('Datos del Usuario', { align: 'center' });
+        doc.text('ID: ' + userData.id);
+        doc.text('Name: ' + userData.nombre);
+        doc.text('Apellido: ' + userData.apellido);
+        doc.text('Name: ' + userData.cedula);
+        doc.text('ID: ' + userData.correo);
+        doc.text('Name: ' + userData.contraseña);
+        
+        // Agrega más información según sea necesario
+
+        // Finaliza el PDF y envíalo como respuesta
+        doc.end();
+        stream.pipe(res);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a PDF:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}
 /*
 const getcorreo = async (req, res) => {
     const { email, password } = req.body;
@@ -447,6 +632,12 @@ export default {
     searchUsers,
     loginUser,
     getPerfil,
-    getUserPerfil
-    
+    getUserPerfil,
+    getLoginHistory,
+    getUsersWithPagination,
+    exportUserData,
+    exportUsersData,
+    exportUsersDataByName,
+    exportUserDataPdf,
+    exportUserDataById 
 };
