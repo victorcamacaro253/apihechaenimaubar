@@ -1,12 +1,25 @@
 import express, { json } from 'express';
+import http from 'http';
 import userRoutes from './routes/userRoutes.js';
-import rateLimit from 'express-rate-limit';
-
+import limiter from './rateLimiter.js';
+import productosRoutes from './routes/productosRoutes.js'
+import comprasRoutes from './routes/comprasRoutes.js'
+import cors from 'cors'
+import { setupWebSocket } from './services/websocketServer.js'; // Importa la función para configurar WebSocket
+import notificationRoutes from './routes/notificationsRoutes.js'
 
 const app = express();
 
 
-app.use(rateLimit);
+// Crear un servidor HTTP a partir de Express
+const server = http.createServer(app);
+
+// Configurar WebSocket
+setupWebSocket(server);
+
+
+app.use(cors())
+app.use(limiter);
 app.use(json());
 app.disable('x-powered-by')
 
@@ -23,6 +36,13 @@ app.options('/api/users/:id', (req, res) => {
 });
 //Usa las rutas de usuarios 
 app.use('/api',userRoutes);
+
+app.use('/api2',productosRoutes);
+
+app.use('/api3',comprasRoutes);
+
+app.use('/api4',notificationRoutes);
+
 
 
 const PORT = process.env.PORT ?? 3001
