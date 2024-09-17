@@ -1,3 +1,4 @@
+import notificacionModel from '../models/notificationsModel.js';
 import notificationService from '../services/notificationService.js';
 
 // Ruta para crear una notificación
@@ -26,6 +27,20 @@ const updateNotification = async (req, res) => {
     }
 };*/
 
+const updateNotification = async (req,res)=>{
+ const {id}= req.params
+ const updateFields= req.body;
+
+ try {
+    const result= await notificationService.updateNotificationAndNotify(id,updateFields)
+    
+    return res.status(200).json(result);
+ } catch (error) {
+    console.error(error)
+    res.status(500).json({error:'Error actualizando notificacion'})
+ }
+}
+
 // Ruta para obtener notificaciones para un usuario
 const getNotifications = async (req, res) => {
     
@@ -40,4 +55,4 @@ const getNotifications = async (req, res) => {
 };
 
 
-export default { getNotifications,createNotification };
+export default { getNotifications,createNotification,updateNotification };
