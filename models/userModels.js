@@ -23,7 +23,8 @@ const UserModel = {
 
     async existingCedula(cedula) {
         const results = await _query('SELECT * FROM usuario WHERE cedula = ?',[cedula]);
-        return results;
+          // Si el arreglo `results` contiene al menos un resultado, retorna `true`, si no, retorna `false`
+        return results.length > 0;
     },
 
     async addUser (name, apellido, cedula, email, hashedPassword){
@@ -34,14 +35,18 @@ const UserModel = {
     },
     // Modelo: updateUser
 async updateUser(id, updateFields, values) {
+
+     //construir la parte de SET para la consulta , añadiendo un signo de interrogacion para cada campo
+     const setClause= updateFields.map(field => `${field} = ? `).join(', '); 
+
     // Construir la consulta SQL
-    const query = `UPDATE usuario SET ${updateFields.join(', ')} WHERE id = ?`;
+    const query = `UPDATE usuario SET ${setClause} WHERE id = ?`;
 
     // Añadir el ID al final de los valores
     const finalValues = values.concat(id);
 
     // Ejecutar la consulta
-    const [results] = await _query(query, finalValues);
+    const results = await _query(query, finalValues);
 
     return results; // Retornar el resultado de la consulta
 },

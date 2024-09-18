@@ -12,13 +12,23 @@ const ProductModel = {
         return results;
     },
 
-    async existingProduct(connection,nombre_producto){
-    const results= await connection.query('SELECT nombre_producto FROM productos WHERE nombre_producto = ?',[nombre_producto])
-    return results;
+    async existingProduct(nombre_producto) {
+        try {
+            const results = await _query(
+                'SELECT nombre_producto FROM productos WHERE nombre_producto = ?',
+                [nombre_producto]
+            );
+            
+            // Si el arreglo `results` contiene al menos un resultado, retorna `true`, si no, retorna `false`
+            return results.length > 0;
+        } catch (error) {
+            console.error('Error en la consulta de productos:', error);
+            throw new Error('Error en la consulta de productos');
+        }
     },
 
-    async addProduct(connection,codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor) {
-        const [results] = await connection.query(
+    async addProduct(codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor) {
+        const results = await _query(
             'INSERT INTO productos (codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor]
         );
@@ -30,10 +40,14 @@ const ProductModel = {
         return result.affectedRows;
     },
     
-      // Modelo: updateUser
+      
 async updateProduct(id, updateFields, values) {
+
+    //construir la parte de SET para la consulta , añadiendo un signo de interrogacion para cada campo
+    const setClause= updateFields.map(field => `${field} = ? `).join(', '); 
+
     // Construir la consulta SQL
-    const query = `UPDATE productos SET ${updateFields.join(', ')} WHERE id_producto = ?`;
+    const query = `UPDATE productos SET ${setClause} WHERE id_producto = ?`;
 
     // Añadir el ID al final de los valores
     const finalValues = values.concat(id);
@@ -58,10 +72,9 @@ async getProductStock(connection,id_producto){
     const [result] = await connection.query('SELECT stock FROM productos WHERE id_producto = ?',[id_producto]);
     return result[0].stock;
 
-},
-
-     
+}
 
 };
+
 
 export default ProductModel;
