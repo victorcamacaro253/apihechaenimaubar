@@ -1,3 +1,4 @@
+import { FieldValue } from 'firebase-admin/firestore';
 import db from '../../db/firebase.js';
 
 const ProductModel=  {
@@ -154,7 +155,116 @@ const ProductModel=  {
       throw new Error('Error al buscar productos');
     }
   },
+  
+  async existingProduct(nombre_producto){
+    const snapshot = await db.collection('productos').where('nombre_producto','==',nombre_producto).get();
+    if (snapshot.empty) {
+      return null; // No user found with the given cedula
+  }
+  
+  const userDoc = snapshot.docs[0];
+  return { id: userDoc.id, ...userDoc.data() };
+},
+
+
+  async addProduct(codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor){
+    try {
+      //Referencia a la coleccion de productos 
+      const productosRef= db.collection('productos');
+
+      //Referencia  a la categoria usando el id_categoria
+     const categoriaRef = db.collection('categorias').doc(id_categoria);
+
+     //Referencia al proveedor usando el id_proveedor
+     const proveedorRef= db.collection('proveedor').doc(id_proveedor);
+
+     const newProduct={
+      codigo,
+      nombre_producto,
+      descripcion,
+      precio,
+      stock,
+      categoria: categoriaRef,
+      proveedor:proveedorRef,
+      activo      
+     };
+
+     const docRef= await productosRef.add(newProduct);
+
+     //Devolver la referencia del documento agregado
+     return { id: docRef.id, ...newProduct};
+      
+    } catch (error) {
+      console.error('Error al agregar el producto en Firestore:', error);
+      throw new Error('Error interno del servidor');
+    }
+  },
+
+  async updateProductStock(id_producto,newStock){
+    try {
+      // Referencia al documento del producto en Firestore
+      const productRef = db.collection('productos').doc(id_producto);
+
+      //Obtenemos el documento del producto para verificar su existencia 
+      const productSnapshot = await productRef.get();
+
+      if(!productSnapshot.exists){
+        throw new Error('Producto no encontrado');
+      }
+
+      //Actualizamos el stock, restando el valor de de newStock
+
+      await productRef.update({
+        stock: FieldValue.increment(-newStock)
+
+       
+      })
+      return {success:true, message:'Stock actualizado correctamente'};
+
+    } catch (error) {
+      console.error('Error actualizando el stock:',error)
+      throw new Error('Error actualizando el stock')
+    }
+  },
+  
+async updateProduct(id_producto,updateFields,values){
+
+  try {
+
+      //Se crea un objeto para los campos que deben actualzarse
+      const updates= {} ;
+
+      //Llenar el objeto con los campos y valores
+      updateFields.forEach((field,index)=>{
+          updates[field]= values[index];
+
+      }) 
+         //Referencia el documento del producto
+         const productRef= db.collection('productos').doc(id_producto) ;
+
+         //Obtener el producto para verificar si existe 
+         const productSnapshot = await productRef.get();
+         if (!productSnapshot.exists) {
+          throw new Error('Producto no encontrado');
+      }
+
+         //Actualizar los campos del producto 
+         await productRef.update(updates);
+
+   
+        return {succes:true,message:'Producto actualizado correctamente'}; 
+
+  } catch (error) {
+      console.error('Error actualizando el producto:', error);
+      throw new Error('Error actualizando el producto');
+  }
 }
+
+   
+
+};
+
+
 
     
       export default ProductModel;

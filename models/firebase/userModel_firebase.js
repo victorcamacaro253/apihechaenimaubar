@@ -322,6 +322,30 @@ async exportUsersDataByName(nombre) {
       console.error('Error al exportar los datos de usuario a Excel:', err);
       throw err;
   }
+},
+
+async updateUser(id,updateFields,values){
+  try {
+
+    //Referencia al documento del usuario por Id
+    const userRef= db.collection('usuarios').doc(id)
+    
+  //Construir el objeto de actualizacion a partir de los campos y valores proporcionados
+    const updateData={};
+
+    updateFields.forEach((field,index)=>{
+      updateData[field] = values[index];
+    })
+    
+    //Ejecutar la actualizacion en firestore
+  await userRef.update(updateData)
+
+  return {message:'Usuario actualizado correctamente'}
+
+  } catch (error) {
+    console.error('Error actualizando el usuario:', error);
+    throw error; // Lanzar el error para manejarlo en el controlador
+  }
 }
 
 }
