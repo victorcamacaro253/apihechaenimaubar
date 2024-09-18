@@ -3,9 +3,9 @@ import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
-//import UserModel from '../models/userModels.js'
+import UserModel from '../models/userModels.js'
 import redis from '../db/redis.js'
-import UserModel from '../models/firebase/userModel_firebase.js'
+//import UserModel from '../models/firebase/userModel_firebase.js'
 
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
@@ -93,7 +93,7 @@ const addUser = async (req, res) => {
 
         const existingUser = await UserModel.existingCedula(cedula)
 
-        if (existingUser.length > 0) {
+        if (existingUser) {
             await connection.rollback();
             return res.status(400).json({ error: 'Usuario ya existe' });
         }
@@ -103,7 +103,7 @@ const addUser = async (req, res) => {
 
         await connection.commit();
 
-        await redis.setEx(`user:${result.insertId}`, 300, JSON.stringify(newUser)); // 300 segundos = 5 minutos
+        await redis.setEx(`user:${result.insertId}`, 300, JSON.stringify(result)); // 300 segundos = 5 minutos
 
         
         res.status(201).json({ id: result.insertId, name });
@@ -131,35 +131,35 @@ const updateUser = async (req, res) => {
         let values = [];
 
         if (name) {
-            updateFields.push('nombre = ?');
+            updateFields.push('nombre');
             values.push(name);
         }
 
         if (apellido) {
-            updateFields.push('apellido = ?');
+            updateFields.push('apellido');
             values.push(apellido);
         }
 
         if (cedula) {
-            updateFields.push('cedula = ?');
+            updateFields.push('cedula');
             values.push(cedula);
         }
 
         if (email) {
-            updateFields.push('correo = ?');
+            updateFields.push('correo');
             values.push(email);
         }
         
         if (password) {
             const hashedPassword = await hash(password, 10);
-            updateFields.push('contraseña = ?');
+            updateFields.push('contraseña');
             values.push(hashedPassword);
         }
 
         if (updateFields.length === 0) {
             return res.status(400).json({ error: 'No hay datos para actualizar' });
         }
-
+      console.log(updateFields)
         const results = await UserModel.updateUser(id, updateFields,values);
 
         if (results.affectedRows === 0) {

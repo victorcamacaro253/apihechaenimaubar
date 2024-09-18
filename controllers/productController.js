@@ -1,7 +1,7 @@
 import { query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import crypto from 'crypto'; // Importa crypto si lo necesitas
 import ProductModel from '../models/productModel.js';
-
+//import ProductModel from '../models/firebase/ProductModel_firebase.js'
 
 
 
@@ -26,9 +26,9 @@ const getProductsById = async (req,res) =>{
     const {id} = req.params
 
     try{
-        const [results] =  await ProductModel.getProductById(id)
+        const results =  await ProductModel.getProductById(id)
         
-        if (results.length === 0) {
+        if(results.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
         res.json(results)
@@ -72,8 +72,9 @@ const addProduct = async (req,res)=>{
 
     try {
         // Verificar si el usuario ya existe
-        const [existingProduct] =  await ProductModel.existingProduct(connection,nombre_producto)
-        if (existingProduct.length > 0) {
+        console.log(nombre_producto)
+        const existingProduct =  await ProductModel.existingProduct(nombre_producto)
+        if (existingProduct) {
             console.log('Resultado de la consulta existente:', existingProduct);
             await connection.rollback(); // Deshacer la transacción
 
@@ -84,8 +85,8 @@ const addProduct = async (req,res)=>{
         
         
 
-        // Consulta SQL para insertar el iproducto
-        const results = await ProductModel.addProduct(connection,codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor)
+        
+        const results = await ProductModel.addProduct(codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor)
 
         // Confirmar transacción
         await connection.commit();
@@ -140,36 +141,36 @@ const updateProduct = async (req,res)=>{
     let values = [];
 
     if (nombre_producto) {
-        updateFields.push('nombre_producto = ?');
+        updateFields.push('nombre_producto');
         values.push(nombre_producto);
     }
 
     if (descripcion) {
-        updateFields.push('descripcion = ?');
+        updateFields.push('descripcion');
         values.push(descripcion);
     }
 
     if (precio) {
-        updateFields.push('precio = ?');
+        updateFields.push('precio');
         values.push(precio);
     }
 
     if (stock) {
-        updateFields.push('stock = ?');
+        updateFields.push('stock');
         values.push(stock);
     }
      
     if (id_categoria) {
-        updateFields.push('id_categoria = ?');
+        updateFields.push('id_categoria');
         values.push(id_categoria);
     }
 
     if (activo) {
-        updateFields.push('activo = ?');
+        updateFields.push('activo');
         values.push(activo);
     }
     if (id_proveedor) {
-        updateFields.push('id_proveedor = ?');
+        updateFields.push('id_proveedor');
         values.push(id_proveedor);
     }
 
@@ -194,6 +195,7 @@ const searchProductByName = async (req, res) => {
     if (!nombre_producto) {
         return res.status(400).json({ error: 'El nombre del producto es requerido' });
     }
+    console.log(nombre_producto)
 
     try {
         const result = await ProductModel.searchProductByName( nombre_producto );
