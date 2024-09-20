@@ -47,6 +47,60 @@ async updateNotification (notificacionId,updateFields){
     
     },
 
+    async deleteNotification(id){
+
+        try{
+            const result= await query('DELETE FROM notificaciones WHERE id = ?',[id]);
+            return result;
+        }catch(error){
+            console.error('Erro al eliminar la notificacion',error)
+        }
+
+    },
+    
+     async getUserNotification(username){
+        
+        try {
+            const result = await query('SELECT * FROM notificaciones_usuarios INNER JOIN usuario ON notificaciones_usuarios.id_usuario=usuario.id WHERE usuario.nombre = ?',[username])
+
+            return result;
+
+        } catch (error) {
+            console.error('Erro al obtener la notificacion',error)
+
+        }
+
+    },
+
+    async createAndNotifyUser(id_notificacion,id_usuario){
+        const result = await query('INSERT INTO notificaciones_usuarios (id_notificacion,id_usuario,datetime) VALUES (?,?, NOW())',[id_notificacion,id_usuario]);
+        return result.insertId;
+    },
+
+    
+async updateUserNotification (notificacionId,updateFields){
+
+
+    try {
+     
+     const queryStr = 'UPDATE notificaciones_usuarios SET ? WHERE id = ?';
+     
+     const result = await query(queryStr,[updateFields,notificacionId]);
+     return result;
+ 
+    } catch (error) {
+     console.error('Error al actualizar todos los usuarios:', error);
+     throw new Error('Error al actualizar todos los usuarios');
+    }
+ 
+     
+     },
+
+
+     async deleteUserNotification(id){
+        const result= await query('DELETE FROM notificaciones_usuarios WHERE id=?',[id]);
+        return result;
+     }
 
 
 }
