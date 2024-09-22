@@ -47,6 +47,12 @@ async deleteCompra(id){
 
     const result = await query('DELETE FROM compras where id_compra= ? ',[id])
     return result;
+},
+
+
+async getComprasCountByUsuario(){
+    const result = await query('SELECT COUNT(*) as cantidad_compras,nombre,apellido FROM compras INNER JOIN usuario ON compras.id_usuario=usuario.id GROUP BY id_usuario')
+    return result;
 }
 
 }
