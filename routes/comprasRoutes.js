@@ -9,14 +9,15 @@ const router = Router();
 //Ruta para obtener el listado de las compras
 router.get('/compras',comprasController.getCompras);
 
-
-
-//Ruta para obtener las compras de un usuario
-router.get('/compras/:id',comprasController.getComprasByUsuarioId);
-
 //Ruta para obtener las compras de un usuario por su nombre
 router.get('/compras/SearchUserCompras/',comprasController.getComprasByUsuario)
 
+
+
+router.get('/compras/comprasByUser',comprasController.getComprasCountByUsuario)
+
+//Ruta para obtener las compras de un usuario
+router.get('/compras/:id',comprasController.getComprasByUsuarioId);
 
 
 //Ruta para comprar un producto
