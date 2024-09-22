@@ -258,6 +258,16 @@ async updateProduct(id_producto,updateFields,values){
       console.error('Error actualizando el producto:', error);
       throw new Error('Error actualizando el producto');
   }
+},
+
+async getProductStock(db, id_producto) {
+  const productoRef = db.collection('productos').doc(id_producto);
+  const productoDoc = await productoRef.get();
+  if (productoDoc.exists) {
+    return productoDoc.data().stock;
+  } else {
+    return null; // o algún otro valor por defecto
+  }
 }
 
    
