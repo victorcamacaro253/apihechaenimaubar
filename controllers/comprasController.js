@@ -1,6 +1,7 @@
 import { pool } from '../db/db1.js'; // Asegúrate de que 'pool' es una instancia de conexión que soporte promesas
-import comprasModel from '../models/comprasModel.js';
+//import comprasModel from '../models/comprasModel.js';
 import ProductModel from '../models/productModel.js';
+import comprasModel from '../models/firebase/comprasModel_firebase.js'
 
 
 const getCompras= async (req,res)=>{
@@ -114,7 +115,6 @@ res.status(200).json({ message: 'Compra eliminado exitosamente' });
 
 const getComprasByUsuarioId= async (req,res) =>{
   const { id } = req.params;
-
   try{
 
     const results = await comprasModel.getComprasByUsuarioId(id)
@@ -145,4 +145,17 @@ try {
 }
 }
 
-export default {compraProduct,deleteCompra,getCompras,getComprasByUsuarioId,getComprasByUsuario};
+const getComprasCountByUsuario= async (req,res)=>{
+
+ try {
+  const result = await comprasModel.getComprasCountByUsuario();
+
+  return res.json(result);
+ } catch (error) {
+  console.error('Erro ejecutando la consulta',error);
+  res.json(500).json({error:'Error interno del servidor',error})
+ }
+
+}
+
+export default {compraProduct,deleteCompra,getCompras,getComprasByUsuarioId,getComprasByUsuario,getComprasCountByUsuario};

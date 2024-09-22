@@ -3,9 +3,9 @@ import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
-import UserModel from '../models/userModels.js'
+//import UserModel from '../models/userModels.js'
 import redis from '../db/redis.js'
-//import UserModel from '../models/firebase/userModel_firebase.js'
+import UserModel from '../models/firebase/userModel_firebase.js'
 
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
