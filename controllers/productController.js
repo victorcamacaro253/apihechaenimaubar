@@ -45,6 +45,7 @@ const getProductsById = async (req,res) =>{
 const addProduct = async (req,res)=>{
 
     const { nombre_producto, descripcion, precio,stock,id_categoria,activo = "activo",id_proveedor } = req.body;
+    const image = req.file
 
     if (!nombre_producto || !descripcion || !precio || !stock || !id_categoria) {
         return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -78,10 +79,12 @@ const addProduct = async (req,res)=>{
         }
 
         
+        // Si se subió una imagen, guarda la ruta de la imagen
+        const imagePath = image ? image.path : null;
         
 
         // Consulta SQL para insertar el iproducto
-        const [results] = await ProductModel.addProduct(connection,codigo,nombre_producto,descripcion, precioNum,stockNum,id_categoria,activo,id_proveedor)
+        const [results] = await ProductModel.addProduct(connection,codigo,nombre_producto,descripcion, precioNum,stockNum,id_categoria,activo,id_proveedor,imagePath)
 
         // Confirmar transacción
         await connection.commit();
@@ -120,10 +123,138 @@ const deleteProduct= async (req,res) =>{
 }
 
 
+const getProductsByCategoria=async(req,res)=>{
+ const {categoria} = req.query
+
+ try {
+    const result = await ProductModel.getProductsByCategoria(categoria);
+
+    if (result.length === 0) {
+        return res.status(404).json({ message: 'No se encontraron productos en esta categoría.' });
+    }
+
+    return res.status(200).json(result);
+    
+ } catch (error) {
+    console.error('Error ejecutando la consulta:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+ }
+}
+
+
+const getProductsByPrinceRange= async (req,res)=>{
+    const {min,max} = req.query  
+
+    if (isNaN(min) || isNaN(max)) {
+        return res.status(400).json({message:'Los parametros min y max deben ser numeros '})
+    }
+
+    try {
+    
+  const result = await ProductModel.getProductsByPrinceRange(min,max);
+
+  if (result.length === 0) {
+    return res.status(404).json({ message: 'No se encontraron productos en este rango de precio.' });
+}
+
+ return res.json(result);
+
+
+
+    } catch (error) {
+        console.error('Error ejecutando la consulta:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}
+
+
+
+const addMultipleProducts = async  (req,res)=>{
+const { products } = req.body;
+const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
+
+if (!products || !Array.isArray(products)) {
+    return res.status(400).json({error:'Products must be an array'})
+    }
+
+    const errors = []
+    const createdProducts = []
+
+    //Iniciar transaccion
+    const connection = await pool.getConnection()
+    await connection.beginTransaction()
+
+
+    try{
+        for(const product of products){
+            const{
+                nombre_producto,
+                descripcion,precio,
+                stock,id_categoria,
+                activo='activo',id_proveedor
+            } = product;
+
+            if(!nombre_producto || !descripcion || !precio || !stock || !id_categoria){
+                errors.push({error:'nombre_producto,descripcion,precio,stock y id_categoria son requeridos'})
+            }
+            const precioNum = parseFloat(precio)
+            const stockNum = parseFloat(stock,10)
+
+            
+      if (isNaN(precioNum) || !Number.isFinite(precioNum) || precioNum < 0) {
+        errors.push({ error: 'El precio debe ser un número positivo' });
+        continue;
+      }
+
+      if (isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0) {
+        errors.push({ error: 'El stock debe ser un número entero positivo' });
+        continue;
+      }
+
+      const codigo = crypto.randomBytes(4).toString('hex').toUpperCase();
+
+
+      //Verificar si el producto ya existe
+      const[existingProduct]= await ProductModel.existingMultipleProduct(connection,nombre_producto)
+       if(existingProduct.length> 0 ){
+        errors.push({error:'producto ya existe'})
+        continue
+       }
+
+
+       
+
+       const [result] = await ProductModel.addMultipleProducts(connection,codigo,nombre_producto,descripcion,precioNum,stockNum,id_categoria,id_categoria,activo,id_proveedor,imagePath)
+
+       createdProducts.push({id:result.insertId,nombre_producto})
+
+    }
+
+    //confirmar transaccion
+    await connection.commit();
+
+   if(errors.length > 0){
+    res.status(400).json({errors})
+   }else {
+    res.status(201).json({createdProducts})
+   }
+
+        }catch(error){
+            console.error('Error ejecutando la consulta:', error);
+    await connection.rollback(); // Deshacer la transacción en caso de error
+    res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
+
+
+
 export default {
     getProducts,
     getProductsById,
     addProduct,
-    deleteProduct
-    
+    deleteProduct,
+    getProductsByCategoria,
+    getProductsByPrinceRange,
+    addMultipleProducts
 }
