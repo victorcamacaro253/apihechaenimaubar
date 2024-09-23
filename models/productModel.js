@@ -17,10 +17,10 @@ const ProductModel = {
          
     },
 
-    async addProduct(connection,codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor) {
+    async addProduct(connection,codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor,imagePath) {
         const [results] = await connection.query(
-            'INSERT INTO productos (codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor]
+            'INSERT INTO productos (codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor,imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)',
+            [codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor,imagePath]
         );
         return results;
     },
@@ -41,7 +41,32 @@ async getProductStock(connection,id_producto){
 async updateProductStock(connection,id_producto,newStock){
     const result = await connection.query('Update productos SET stock=? WHERE id_producto=?',[newStock,id_producto])
     return result;
-   }
+   },
+
+   async getProductsByCategoria(categoria){
+    const result= await query('SELECT * FROM productos INNER JOIN categorias ON productos.id_categoria = categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor = proveedor.id_proveedor WHERE categoria=?',[categoria])
+   return result;   
+},
+
+async getProductsByPrinceRange(min,max){
+    const result= await query('SELECT * FROM productos WHERE precio BETWEEN ? AND ?',[parseFloat(min),parseFloat(max)])
+    return result;
+},
+
+async addMultipleProducts (connection,product){
+
+    const queries = product.map((product)=>{
+        const {codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagePath}= product;
+
+        return connection.query('INSERT INTO productos (codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagen) VALUES (?,?,?,?,?,?,?,?,?)',
+            [codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagePath || '']
+        )
+    })
+
+   const result = await Promise.all(queries);
+   return result;
+
+}
 
   
 };
