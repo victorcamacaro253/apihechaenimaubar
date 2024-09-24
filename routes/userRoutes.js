@@ -47,4 +47,8 @@ router.patch('/users/:id', userController.partialUpdateUser)
 
 router.post('/users/addMultipleUsers',userController.addMultipleUsers)
 
+
+router.post('/users/deleteMultipleUsers',userController.deleteMultipleUsers)
+
+
 export default router;

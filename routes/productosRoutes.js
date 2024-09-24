@@ -22,6 +22,7 @@ router.get('/Products/:id',productController.getProductsById)
 
 router.post('/Products',upload.single('image'),productController.addProduct);
 
+router.post('/Products/deleteMultipleProducts',productController.deleteMultipleProducts)
 
 router.delete('/Products/:id',productController.deleteProduct)
 
