@@ -63,7 +63,9 @@ async addMultipleProducts (connection, products) {
 
     const result = await Promise.all(queries);
     return result;
-}
+},
+
+
 
   
 };
