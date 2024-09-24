@@ -59,29 +59,29 @@ const addUser = async (req, res) => {
         return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
     }
 
-    const connection = await pool.getConnection(); // Obtener conexión desde el pool
+   // const connection = await pool.getConnection(); // Obtener conexión desde el pool
     try {
-        await connection.beginTransaction();
+     //   await connection.beginTransaction();
 
-        const existingUser = await UserModel.existingCedula(connection,cedula)
+        const existingUser = await UserModel.existingCedula(cedula)
 
         if (existingUser.length > 0) {
-            await connection.rollback();
+           // await connection.rollback();
             return res.status(400).json({ error: 'Usuario ya existe' });
         }
 
         const hashedPassword = await hash(password, 10);
-        const result = await UserModel.addUser(connection, name, apellido, cedula, email, hashedPassword);
+        const result = await UserModel.addUser(name, apellido, cedula, email,hashedPassword);
 
-        await connection.commit();
+        //await connection.commit();
         res.status(201).json({ id: result.insertId, name, email });
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
         
-        await connection.rollback();
+      //  await connection.rollback();
         res.status(500).json({ error: 'Error interno del servidor' });
     } finally {
-        connection.release(); // Liberar la conexión después de usarla
+      //  connection.release(); // Liberar la conexión después de usarla
     }
 };
 
@@ -554,6 +554,90 @@ const exportUserDataById = async (req,res)=>{
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 }
+
+
+
+
+const addMultipleUsers= async (req,res)=>{
+  const { users } = req.body
+  const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null ;
+
+  console.log(users)
+
+  if(!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.users)){
+    return res.status(400).json({error:'Users must be an array'})
+  }
+
+  const errors= [];
+  const createdUsers = [];
+  
+   try {
+    
+  const usersToInsert = [];
+
+  for(const user of users){
+    const {
+        name,
+         apellido,
+          cedula,
+           email,
+            password
+    } = user
+
+    if (!name || !apellido || !email || !password) {
+        return res.status(400).json({ error: 'Nombre, apellido, correo y contraseña son requeridos' });
+    }
+
+    if (password.length < 7) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
+    }
+
+    const existingUser = await UserModel.existingCedula(cedula)
+
+    if (existingUser.length > 0) {
+      
+       errors.push({error:'El usuario ya existe',name})
+       continue
+    }
+
+    const hashedPassword = await hash(password, 10);
+
+    usersToInsert.push({
+
+    name,
+    apellido,
+    cedula,
+    email,
+     hashedPassword
+    })
+  // Llamar a la función de inserción de múltiples productos en el modelo
+  const [result] = await UserModel.addMultipleUsers(usersToInsert);
+
+  createdUsers.push({ id: result.insertId, name });
+
+  }
+
+
+
+  
+  if (errors.length > 0) {
+    res.status(400).json({ errors });
+} else {
+    res.status(201).json({ createdUsers });
+}
+
+
+   } catch (error) {
+    console.error('Error ejecutando la consulta:', error);
+   
+    res.status(500).json({ error: 'Error interno del servidor' });
+   }
+
+
+}
+
+
+
 /*
 const getcorreo = async (req, res) => {
     const { email, password } = req.body;
@@ -639,5 +723,6 @@ export default {
     exportUsersData,
     exportUsersDataByName,
     exportUserDataPdf,
-    exportUserDataById 
+    exportUserDataById,
+    addMultipleUsers
 };

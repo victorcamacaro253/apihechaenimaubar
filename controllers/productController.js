@@ -169,82 +169,100 @@ const getProductsByPrinceRange= async (req,res)=>{
 
 
 
-const addMultipleProducts = async  (req,res)=>{
-const { products } = req.body;
-const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
+const addMultipleProducts = async (req, res) => {
+    const { products } = req.body;
+    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
 
-if (!products || !Array.isArray(products)) {
-    return res.status(400).json({error:'Products must be an array'})
+    console.log(products)
+
+    if (!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.products)) {
+        return res.status(400).json({ error: 'Products must be an array' });
     }
+    const errors = [];
+    const createdProducts = [];
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
 
-    const errors = []
-    const createdProducts = []
+    try {
 
-    //Iniciar transaccion
-    const connection = await pool.getConnection()
-    await connection.beginTransaction()
-
-
-    try{
-        for(const product of products){
-            const{
+        const productsToInsert = []
+        for (const product of products) {
+            const {
                 nombre_producto,
-                descripcion,precio,
-                stock,id_categoria,
-                activo='activo',id_proveedor
+                descripcion,
+                precio,
+                stock,
+                id_categoria,
+                activo = 'activo',
+                id_proveedor
             } = product;
 
-            if(!nombre_producto || !descripcion || !precio || !stock || !id_categoria){
-                errors.push({error:'nombre_producto,descripcion,precio,stock y id_categoria son requeridos'})
+            if (!nombre_producto || !descripcion || !precio || !stock || !id_categoria) {
+                errors.push({ error: 'nombre_producto, descripcion, precio, stock y id_categoria son requeridos' });
+                continue;
             }
-            const precioNum = parseFloat(precio)
-            const stockNum = parseFloat(stock,10)
 
-            
-      if (isNaN(precioNum) || !Number.isFinite(precioNum) || precioNum < 0) {
-        errors.push({ error: 'El precio debe ser un número positivo' });
-        continue;
-      }
+            const precioNum = parseFloat(precio);
+            const stockNum = parseFloat(stock, 10);
 
-      if (isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0) {
-        errors.push({ error: 'El stock debe ser un número entero positivo' });
-        continue;
-      }
+            if (isNaN(precioNum) || !Number.isFinite(precioNum) || precioNum < 0) {
+                errors.push({ error: 'El precio debe ser un número positivo' });
+                continue;
+            }
 
-      const codigo = crypto.randomBytes(4).toString('hex').toUpperCase();
+            if (isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0) {
+                errors.push({ error: 'El stock debe ser un número entero positivo' });
+                continue;
+            }
+
+            const codigo = crypto.randomBytes(4).toString('hex').toUpperCase();
+
+            // Verificar si el producto ya existe
+            const [existingProduct] = await ProductModel.existingProduct(connection, nombre_producto);
+            if (existingProduct.length > 0) {
+                errors.push({ error: 'El producto ya existe',nombre_producto });
+                continue;
+            }
+
+          
+           //Preparar el producto para la insercion
+           productsToInsert.push({
+            codigo,
+            nombre_producto,
+            descripcion,
+            precio:precioNum,
+            stock:stockNum,
+            id_categoria,
+            activo,
+            id_proveedor,
+            imagePath : imagePath || ''
+           })
 
 
-      //Verificar si el producto ya existe
-      const[existingProduct]= await ProductModel.existingMultipleProduct(connection,nombre_producto)
-       if(existingProduct.length> 0 ){
-        errors.push({error:'producto ya existe'})
-        continue
-       }
+            // Llamar a la función de inserción de múltiples productos en el modelo
+            const [result] = await ProductModel.addMultipleProducts(connection,productsToInsert);
 
-
-       
-
-       const [result] = await ProductModel.addMultipleProducts(connection,codigo,nombre_producto,descripcion,precioNum,stockNum,id_categoria,id_categoria,activo,id_proveedor,imagePath)
-
-       createdProducts.push({id:result.insertId,nombre_producto})
-
-    }
-
-    //confirmar transaccion
-    await connection.commit();
-
-   if(errors.length > 0){
-    res.status(400).json({errors})
-   }else {
-    res.status(201).json({createdProducts})
-   }
-
-        }catch(error){
-            console.error('Error ejecutando la consulta:', error);
-    await connection.rollback(); // Deshacer la transacción en caso de error
-    res.status(500).json({ error: 'Error interno del servidor' });
+            createdProducts.push({ id: result.insertId, nombre_producto });
         }
+
+        // Confirmar transacción
+        await connection.commit();
+
+        if (errors.length > 0) {
+            res.status(400).json({ errors });
+        } else {
+            res.status(201).json({ createdProducts });
+        }
+
+    } catch (error) {
+        console.error('Error ejecutando la consulta:', error);
+        await connection.rollback(); // Deshacer la transacción en caso de error
+        res.status(500).json({ error: 'Error interno del servidor' });
+    } finally {
+        connection.release(); // Liberar el connection pool
     }
+};
+
 
 
 
