@@ -1,5 +1,6 @@
 import { query as _query } from '../db/db1.js';
-import bcrypt from 'bcrypt';
+//import bcrypt from 'bcrypt';
+//import { promises } from 'nodemailer/lib/xoauth2/index.js';
 import XLSX from 'xlsx';
 
 const UserModel = {
@@ -35,13 +36,13 @@ const UserModel = {
 
     },
 
-    async existingCedula(connection,cedula) {
-        const [results] = await connection.query('SELECT * FROM usuario WHERE cedula = ?',[cedula]);
+    async existingCedula(cedula) {
+        const results = await _query('SELECT * FROM usuario WHERE cedula = ?',[cedula]);
         return results;
     },
 
-    async addUser (connection, name, apellido, cedula, email, hashedPassword){
-        const [result]= await connection.query( 'INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña) VALUES (?, ?, ?, ?, ?)',
+    async addUser (name, apellido, cedula, email, hashedPassword){
+        const result= await _query( 'INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña) VALUES (?, ?, ?, ?, ?)',
             [name, apellido, cedula, email, hashedPassword] );
 
             return result;
@@ -257,6 +258,22 @@ try {
             console.error('Error exporting user data to Excel:', err);
             throw err;
         }
+    },
+
+
+
+    async addMultipleUsers(users){
+        const queries = users.map(user=>{
+            const {name,apellido,cedula,email,hashedPassword} = user;
+
+            return _query('INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña) VALUES (?, ?, ?, ?, ?) ',
+                [name,apellido,cedula,email,hashedPassword]
+            )
+        })
+
+        const result = await Promise.all(queries);
+        return result
+
     }
 
 

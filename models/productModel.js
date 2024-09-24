@@ -52,20 +52,17 @@ async getProductsByPrinceRange(min,max){
     const result= await query('SELECT * FROM productos WHERE precio BETWEEN ? AND ?',[parseFloat(min),parseFloat(max)])
     return result;
 },
+async addMultipleProducts (connection, products) {
+    const queries = products.map((product) => {
+        const { codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagePath } = product;
 
-async addMultipleProducts (connection,product){
-
-    const queries = product.map((product)=>{
-        const {codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagePath}= product;
-
-        return connection.query('INSERT INTO productos (codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagen) VALUES (?,?,?,?,?,?,?,?,?)',
-            [codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagePath || '']
+        return connection.query('INSERT INTO productos (codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagen) VALUES (?,?,?,?,?,?,?,?,?)',
+            [codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagePath || '']
         )
     })
 
-   const result = await Promise.all(queries);
-   return result;
-
+    const result = await Promise.all(queries);
+    return result;
 }
 
   
