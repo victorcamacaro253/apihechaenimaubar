@@ -30,7 +30,7 @@ router.get('/users/pagination',userController.getUsersWithPagination)
 
 //Ruta para agregar un nuevo usuario
 
-router.post('/users',authenticateToken,userController.addUser);
+router.post('/users',userController.addUser);
 
 router.post('/users/login', userController.loginUser);
 
@@ -45,6 +45,6 @@ router.delete('/users/:id', userController.deleteUser);
 router.patch('/users/:id', userController.partialUpdateUser)
 
 
-
+router.post('/users/addMultipleUsers',userController.addMultipleUsers)
 
 export default router;
