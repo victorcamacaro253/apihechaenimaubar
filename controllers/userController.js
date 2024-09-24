@@ -637,7 +637,30 @@ const addMultipleUsers= async (req,res)=>{
 }
 
 
+const deleteMultipleUsers= async (req,res)=>{
+   const { users } = req.body
 
+
+   if (!Array.isArray(users)) {
+    return res.status(400).json({ error: 'Users must be an array' });
+ }
+
+ try {
+    const deletePromises = users.map(user=>{
+        const { id } = user
+        return UserModel.deleteUser(id)
+    })
+
+    await Promise.all(deletePromises)
+        
+    res. status(200).json({ message:'Usarios eliminados exitosamente'})
+
+    
+ } catch (error) {
+    res.status(500).json({ error: 'Error interno del servidor' },error);
+ }
+
+}
 /*
 const getcorreo = async (req, res) => {
     const { email, password } = req.body;
@@ -724,5 +747,6 @@ export default {
     exportUsersDataByName,
     exportUserDataPdf,
     exportUserDataById,
-    addMultipleUsers
+    addMultipleUsers,
+    deleteMultipleUsers
 };

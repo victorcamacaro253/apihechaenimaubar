@@ -264,7 +264,28 @@ const addMultipleProducts = async (req, res) => {
 };
 
 
+const deleteMultipleProducts= async (req,res)=>{
+    const { products } = req.body
 
+
+    if (!Array.isArray(products)) {
+        return res.status(400).json({ error: 'Products must be an array' });
+    }
+
+    try {
+        const deletePromises = products.map(product => { 
+                const { id } = product;
+                return ProductModel.deleteProduct(id)
+        })
+
+   await Promise.all(deletePromises)
+
+   res. status(200).json({ message:'Porductos eliminados exitosamente'})
+         
+    } catch (error) {
+        res.status(500).json({ error: 'Error interno del servidor' },error);
+    }
+}
 
 
 export default {
@@ -274,5 +295,6 @@ export default {
     deleteProduct,
     getProductsByCategoria,
     getProductsByPrinceRange,
-    addMultipleProducts
+    addMultipleProducts,
+    deleteMultipleProducts
 }
