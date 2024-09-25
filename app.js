@@ -4,6 +4,7 @@ import productsRoutes from './routes/productsRoutes.js'
 import comprasRoutes from './routes/comprasRoutes.js'
 import limiter from './rateLimiter.js';
 import helmet from 'helmet';
+import cors from 'cors';
 
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(helmet.contentSecurityPolicy({
     },
   }))
 *//
+app.use(cors())
 app.use(json());
 app.use(limiter);
 
