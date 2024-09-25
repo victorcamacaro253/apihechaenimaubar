@@ -85,7 +85,7 @@ async searchUsers({ name, apellido, cedula }) {
 
 
     async deleteUser(id) {
-        const [result] = await _query('DELETE FROM usuario WHERE id = ?', [id]);
+        const result = await _query('DELETE FROM usuario WHERE id = ?', [id]);
         return result.affectedRows;
     },
 
@@ -238,9 +238,24 @@ async exportUserData(id){
             console.error('Error exporting user data to Excel:', err);
             throw err;
         }
-    }
+    },
 
 
+    async addMultipleUser(users){
+        const queries = users.map(user=>{
+            const {name,apellido,cedula,email,hashedPassword,imagePath} = user;
+
+            return _query('INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña,imagen) VALUES (?, ?, ?, ?, ?,?) ',
+                [name,apellido,cedula,email,hashedPassword,imagePath]
+            )
+        })
+
+        const result = await Promise.all(queries);
+        return result
+
+    },
+
+    
 
 };
 

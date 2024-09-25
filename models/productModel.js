@@ -72,7 +72,34 @@ async getProductStock(connection,id_producto){
     const [result] = await connection.query('SELECT stock FROM productos WHERE id_producto = ?',[id_producto]);
     return result[0].stock;
 
+},
+
+async getProductsByCategoria(categoria){
+    const result= await _query('SELECT * FROM productos INNER JOIN categorias ON productos.id_categoria = categorias.id_categoria INNER JOIN proveedor ON productos.id_proveedor = proveedor.id_proveedor WHERE categoria=?',[categoria])
+   return result;   
+},
+
+async getProductsByPriceRange(min,max){
+    const result= await _query('SELECT * FROM productos WHERE precio BETWEEN ? AND ?',[parseFloat(min),parseFloat(max)])
+    return result;
+},
+
+async addMultipleProducts (product){
+
+    const queries = product.map((product)=>{
+        const {codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagePath}= product;
+
+        return _query('INSERT INTO productos (codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagen) VALUES (?,?,?,?,?,?,?,?,?)',
+            [codigo,nombre_producto,descripcion,precio,stock,id_categoria,activo,id_proveedor,imagePath || '']
+        )
+    })
+
+   const result = await Promise.all(queries);
+   return result;
+
 }
+
+
 
 };
 
