@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import userController from '../controllers/userController.js';
 import authenticateToken from '../middleware/authenticationToken.js';
+import upload from '../middleware/multerConfig.js';
 
 
 const router = Router();
@@ -49,6 +50,11 @@ router.post('/users/login', userController.loginUser);
 router.get('/users/:id',userController.getUserById);
 
 
+//Ruta para insertar multiples usuarios
+router.post('/users/addMultipleUsers',userController.addMultipleUsers)
+
+//Ruta para eliminar multiple usuarios
+router.post('/users/deleteMultipleUsers',userController.deleteMultipleUsers)
 
 
 //Ruta para actualizar un usuario
