@@ -3,9 +3,9 @@ import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
-//import UserModel from '../models/userModels.js'
+import UserModel from '../models/userModels.js'
 import redis from '../db/redis.js'
-import UserModel from '../models/firebase/userModel_firebase.js'
+//import UserModel from '../models/firebase/userModel_firebase.js'
 
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
@@ -524,6 +524,116 @@ const exportUsersDataByName = async (req, res) => {
     }
 };
 
+
+
+
+const addMultipleUsers = async (req,res)=>{
+    const { users } = req.body
+    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null ;
+  
+    console.log(users)
+  
+    if(!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.users)){
+      return res.status(400).json({error:'Users must be an array'})
+    }
+  
+    const errors= [];
+    const createdUsers = [];
+    
+     try {
+      
+    const usersToInsert = [];
+  
+    for(const user of users){
+      const {
+          name,
+           apellido,
+            cedula,
+             email,
+              password
+      } = user
+  
+      if (!name || !apellido || !email || !password) {
+          return res.status(400).json({ error: 'Nombre, apellido, correo y contraseña son requeridos' });
+      }
+  
+      if (password.length < 7) {
+          return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
+      }
+  
+      const existingUser = await UserModel.existingCedula(cedula)
+  
+      if (existingUser) {
+        
+         errors.push({error:'El usuario ya existe',name})
+         continue
+      }
+  
+      const hashedPassword = await hash(password, 10);
+  
+      usersToInsert.push({
+  
+      name,
+      apellido,
+      cedula,
+      email,
+       hashedPassword,
+       imagePath
+      })
+    // Llamar a la función de inserción de múltiples productos en el modelo
+    const [result] = await UserModel.addMultipleUser(usersToInsert)
+  
+    createdUsers.push({ id: result.insertId, name });
+  
+    }
+  
+  
+  
+    
+    if (errors.length > 0) {
+      res.status(400).json({ errors });
+  } else {
+      res.status(201).json({ createdUsers });
+  }
+  
+  
+     } catch (error) {
+      console.error('Error ejecutando la consulta:', error);
+     
+      res.status(500).json({ error: 'Error interno del servidor' });
+     }
+  
+  
+  }
+  
+  
+const deleteMultipleUsers= async (req,res)=>{
+    const { users } = req.body
+ 
+ 
+    if (!Array.isArray(users)) {
+     return res.status(400).json({ error: 'Users must be an array' });
+  }
+ 
+  try {
+     const deletePromises = users.map(user=>{
+         const { id } = user
+         return UserModel.deleteUser(id)
+     })
+ 
+     await Promise.all(deletePromises)
+         
+     res. status(200).json({ message:'Usarios eliminados exitosamente'})
+ 
+     
+  } catch (error) {
+     res.status(500).json({ error: 'Error interno del servidor' },error);
+  }
+ 
+ }
+ 
+
+
 /*
 const getcorreo = async (req, res) => {
     const { email, password } = req.body;
@@ -607,5 +717,7 @@ export default {
     getUsersWithPagination,
     exportUserData,
     exportUsersData,
-    exportUsersDataByName
+    exportUsersDataByName,
+    addMultipleUsers,
+    deleteMultipleUsers
 };

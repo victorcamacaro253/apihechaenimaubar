@@ -46,6 +46,9 @@ const getProductsById = async (req,res) =>{
 const addProduct = async (req,res)=>{
 
     const { nombre_producto, descripcion, precio,stock,id_categoria,activo = "activo",id_proveedor } = req.body;
+    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
+
+
 
     if (!nombre_producto || !descripcion || !precio || !stock ||!id_categoria) {
         return res.status(400).json({ error: 'Todos los campos son requeridos' });
@@ -81,12 +84,8 @@ const addProduct = async (req,res)=>{
             return res.status(400).json({ error: 'Producto ya existe' });
 
         }
-
         
-        
-
-        
-        const results = await ProductModel.addProduct(codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor)
+        const results = await ProductModel.addProduct(codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor,imagePath)
 
         // Confirmar transacción
         await connection.commit();
@@ -213,12 +212,177 @@ const searchProductByName = async (req, res) => {
 
 
 
+const getProductsByCategoria=async(req,res)=>{
+    const {categoria} = req.query
+   
+    try {
+       const result = await ProductModel.getProductsByCategoria(categoria);
+   
+       if (result.length === 0) {
+           return res.status(404).json({ message: 'No se encontraron productos en esta categoría.' });
+       }
+   
+       return res.status(200).json(result);
+       
+    } catch (error) {
+       console.error('Error ejecutando la consulta:', err);
+       res.status(500).json({ error: 'Error interno del servidor' });
+    }
+   }
+   
+   
+   const getProductsByPriceRange= async (req,res)=>{
+       const {min,max} = req.query  
+   
+       if (isNaN(min) || isNaN(max)) {
+           return res.status(400).json({message:'Los parametros min y max deben ser numeros '})
+       }
+   
+       try {
+       
+     const result = await ProductModel.getProductsByPriceRange(min,max);
+   
+     if (result.length === 0) {
+       return res.status(404).json({ message: 'No se encontraron productos en este rango de precio.' });
+   }
+   
+    return res.json(result);
+   
+   
+   
+       } catch (error) {
+           console.error('Error ejecutando la consulta:', err);
+           res.status(500).json({ error: 'Error interno del servidor' });
+       }
+   }
+   
+   
+   
+const addMultipleProducts = async (req, res) => {
+    const { products } = req.body;
+    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
+
+    console.log(products)
+
+    if (!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.products)) {
+        return res.status(400).json({ error: 'Products must be an array' });
+    }
+    const errors = [];
+    const createdProducts = [];
+    
+
+    try {
+
+        const productsToInsert = []
+        for (const product of products) {
+            const {
+                nombre_producto,
+                descripcion,
+                precio,
+                stock,
+                id_categoria,
+                activo = 'activo',
+                id_proveedor
+            } = product;
+
+            if (!nombre_producto || !descripcion || !precio || !stock || !id_categoria) {
+                errors.push({ error: 'nombre_producto, descripcion, precio, stock y id_categoria son requeridos' });
+                continue;
+            }
+
+            const precioNum = parseFloat(precio);
+            const stockNum = parseFloat(stock, 10);
+
+            if (isNaN(precioNum) || !Number.isFinite(precioNum) || precioNum < 0) {
+                errors.push({ error: 'El precio debe ser un número positivo' });
+                continue;
+            }
+
+            if (isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0) {
+                errors.push({ error: 'El stock debe ser un número entero positivo' });
+                continue;
+            }
+
+            const codigo = crypto.randomBytes(4).toString('hex').toUpperCase();
+
+            // Verificar si el producto ya existe
+            const existingProduct = await ProductModel.existingProduct(nombre_producto);
+            if (existingProduct) {
+                errors.push({ error: 'El producto ya existe',nombre_producto });
+                continue;
+            }
+
+          
+           //Preparar el producto para la insercion
+           productsToInsert.push({
+            codigo,
+            nombre_producto,
+            descripcion,
+            precio:precioNum,
+            stock:stockNum,
+            id_categoria,
+            activo,
+            id_proveedor,
+            imagePath : imagePath || ''
+           })
+
+
+            // Llamar a la función de inserción de múltiples productos en el modelo
+            const [result] = await ProductModel.addMultipleProducts(productsToInsert);
+
+            createdProducts.push({ id: result.insertId, nombre_producto });
+        }
+
+
+        if (errors.length > 0) {
+            res.status(400).json({ errors });
+        } else {
+            res.status(201).json({ createdProducts });
+        }
+
+    } catch (error) {
+        console.error('Error ejecutando la consulta:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    } 
+};
+
+
+const deleteMultipleProducts= async (req,res)=>{
+    const { products } = req.body
+
+
+    if (!Array.isArray(products)) {
+        return res.status(400).json({ error: 'Products must be an array' });
+    }
+
+    try {
+        const deletePromises = products.map(product => { 
+                const { id } = product;
+                return ProductModel.deleteProduct(id)
+        })
+
+   await Promise.all(deletePromises)
+
+   res. status(200).json({ message:'Porductos eliminados exitosamente'})
+         
+    } catch (error) {
+        res.status(500).json({ error: 'Error interno del servidor' },error);
+    }
+}
+
+
+   
+
 export default {
     getProducts,
     getProductsById,
     addProduct,
     deleteProduct,
     searchProductByName,
-    updateProduct
+    updateProduct,
+    getProductsByCategoria,
+    getProductsByPriceRange,
+    addMultipleProducts,
+    deleteMultipleProducts
 
 };
