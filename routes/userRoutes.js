@@ -9,20 +9,10 @@ import comprasController from '../controllers/comprasController.js';
 router.get('/users',userController.getAllUser);
 
 router.get('/users/searchUser',userController.searchUsers);
+
 router.get('/users/getperfil',authenticateToken ,userController.getPerfil)
 
-router.get('/users/export/name',userController.exportUsersDataByName)
-
 router.get('/users/loginHistorial',userController.getLoginHistory)
-
-router.get('/users/export/:id', userController.exportUserData);
-
-router.get('/users/export', userController.exportUsersData);
-
- 
-router.get('/users/exportPDF',userController.exportUserDataPdf)
-
-router.get('/users/exportPDF/:id',userController.exportUserDataById)
 
 router.get('/users/getUserPerfil/:id',userController.getUserPerfil)
 
