@@ -7,6 +7,8 @@ import comprasRoutes from './routes/comprasRoutes.js'
 import cors from 'cors'
 import { setupWebSocket } from './services/websocketServer.js'; // Importa la función para configurar WebSocket
 import notificationRoutes from './routes/notificationsRoutes.js'
+import notificationUserRoutes from './routes/notificationUserRoutes.js'
+import exportRoutes from './routes/exportRoutes.js'
 
 const app = express();
 
@@ -42,6 +44,10 @@ app.use('/api2',productosRoutes);
 app.use('/api3',comprasRoutes);
 
 app.use('/api4',notificationRoutes);
+
+app.use('/api5',notificationUserRoutes);
+
+app.use('/api6',exportRoutes);
 
 
 
