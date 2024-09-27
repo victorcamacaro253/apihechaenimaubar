@@ -43,7 +43,18 @@ async deleteCompra(id){
     const result = await query('DELETE FROM compras WHERE id_compra=?',[id])
         return result;
     
+},
+
+async findByDateRange (startDate, endDate){
+    const query = `
+        SELECT * FROM compras 
+        WHERE fecha_compra BETWEEN ? AND ?
+    `;
+    const [results] = await pool.query(query, [startDate, endDate]);
+    return results;
 }
+
+
 
 }
 export default comprasModel;
