@@ -8,6 +8,9 @@ const router = Router()
 
 router.get('/compra',comprasController.getCompras);
 
+router.get('/compra/fecha', comprasController.getComprasByDate);
+
+
 router.get('/compra/:id',comprasController.getCompraById)
 
 router.post('/compra',comprasController.compraProduct);
