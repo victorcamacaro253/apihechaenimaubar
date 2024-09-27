@@ -182,5 +182,31 @@ const deleteCompra = async (req,res) => {
  }
 }
 
+const getComprasByDate = async (req, res) => {
+  const { startDate, endDate } = req.query; // Obtener fechas desde los parámetros de consulta
 
-export default {getCompras,compraProduct,deleteCompra,getCompraById};
+  // Validar las fechas
+  if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Se requieren startDate y endDate' });
+  }
+
+  // Formatear las fechas (asegúrate de que el formato sea el correcto según tu base de datos)
+  const formattedStartDate = new Date(startDate);
+  const formattedEndDate = new Date(endDate);
+
+  if (isNaN(formattedStartDate) || isNaN(formattedEndDate)) {
+      return res.status(400).json({ error: 'Fechas inválidas' });
+  }
+
+  try {
+      // Consultar la base de datos para obtener las compras en el rango de fechas
+      const compras = await compraModel.findByDateRange(formattedStartDate, formattedEndDate);
+      res.status(200).json(compras);
+  } catch (error) {
+      console.error('Error obteniendo compras por fecha:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+
+export default {getCompras,compraProduct,deleteCompra,getCompraById,getComprasByDate};
