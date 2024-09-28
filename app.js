@@ -1,59 +1,53 @@
 import express, { json } from 'express';
-import userRoutes from './routes/userRoutes.js';
-import productsRoutes from './routes/productsRoutes.js'
-import comprasRoutes from './routes/comprasRoutes.js'
-import limiter from './rateLimiter.js';
+import empleadosRoutes from './routes/EmpleadosRoutes.js';
+import administradoresRoutes from './routes/administradoresRoutes.js'
+import bienesRoutes from './routes/bienesRoutes.js'
 import helmet from 'helmet';
-import cors from 'cors';
+import cors from 'cors'
+import path from 'path';
+import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser'; // <-- Agrega esto
+import csrf from 'csurf'; // <-- Agrega esto también
+
+
+// Get the current file's directory (equivalent to __dirname in CommonJS)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 const app = express();
 
-app.use(helmet())
-
-/*
-app.use(helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
-      styleSrc: ["'self'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "https://example.com"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: true,
-    },
-  }))
-*//
 app.use(cors())
-app.use(json());
-app.use(limiter);
+// Añadir protección CSRF con cookies
+const csrfProtection = csrf({ cookie: true });
+// Middleware para procesar cookies
+app.use(cookieParser());
 
+
+app.use(json());
 app.disable('x-powered-by')
 
-app.get('/',(req,res)=>{
-    res.json({ message : 'hola mundo' })
-})
+app.use(helmet());
+
+app.use('/uploads',express.static(path.join(__dirname,'uploads')));
 
 
-app.options('/api/users/:id', (req, res) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    res.sendStatus(200);
-});
-//Usa las rutas de usuarios 
-app.use('/api',userRoutes);
+// Generar y enviar el token CSRF en una ruta
+app.get('/csrf-token', csrfProtection, (req, res) => {
+    // Envía el token CSRF en una cookie llamada 'XSRF-TOKEN'
+    res.cookie('XSRF-TOKEN', req.csrfToken());
+    res.json({ csrfToken: req.csrfToken() });
+  });
+  
+
+app.use('/api',csrfProtection,empleadosRoutes);
+
+app.use('/api2',administradoresRoutes);
+
+app.use('/api3',bienesRoutes);
 
 
-//Usa las rutas de productos
-app.use('/api2',productsRoutes);
-
-
-//Usa las rutas de las compras
-app.use('/api3',comprasRoutes);
-
-
-const PORT = process.env.PORT ?? 3000
+const PORT = process.env.PORT ?? 3001
 
 app.listen(PORT, ()=>{
     console.log(`Server running on port ${PORT}`)
