@@ -11,7 +11,7 @@ const UserModel = {
 
     async getUserById(id) {
         const results = await _query('SELECT * FROM usuario WHERE id = ?', [id]);
-        return results.length ? results[0] : null;
+        return results;
     },
 
     async getUserByNombre(nombre){
@@ -33,6 +33,18 @@ const UserModel = {
 
             return result;
     },
+    async addUserGoogle({ google_id, nombre, correo, imagen }) {
+        const result = await _query('INSERT INTO usuario (google_id, nombre, correo,jose, imagen) VALUES (?, ?, ?, ?)',
+            [google_id, nombre, correo, imagen]
+        );
+    
+
+    
+        // Verifica que el usuario existe antes de retornarlo
+        return result; // Retorna null si no se encuentra el usuario
+    },
+    
+    
     // Modelo: updateUser
 async updateUser(id, updateFields, values) {
 
@@ -151,95 +163,8 @@ async getUsersWithPagination(limit,offset){
     }
 },
 
-
-async exportUserData(id){
-    try {
-        const user = await this.getUserById(id);
-        
-        if(!user){
-            throw new Error('Usuario no encontrado');
-        }
-
-        //Create a new workbook
-
-        const wb = XLSX.utils.book_new();
-
-        //create a worksheet from user data
-        const ws = XLSX.utils.json_to_sheet([user],{
-            header:['id','nombre','apellido','cedula','correo']
-        });
-
-        XLSX.utils.book_append_sheet(wb,ws,'Usuario');
-
-        //convert workbook to buffer
-        const excelBuffer = XLSX.write(wb,{booktype:'xlsx',type:'buffer'});
-
-        return excelBuffer;
-
-    } catch (error) {
-        console.error('Error exporting user data',error);
-        throw error;
-    }
-},
-
-    // Method to export user data to Excel
-    async exportUsersData() {
-        try {
-            const users = await this.getAllUsers(); // Use the corrected method
-            if (!users || users.length === 0) {
-                throw new Error('No users found');
-            }
-
-            // Create a new workbook
-            const wb = XLSX.utils.book_new();
-
-            // Create a worksheet from user data
-            const ws = XLSX.utils.json_to_sheet(users, {
-                header: ['id', 'nombre', 'apellido', 'cedula', 'correo']
-            });
-
-            // Append the worksheet to the workbook
-            XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
-
-            // Convert workbook to buffer
-            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
-
-            return excelBuffer;
-        } catch (err) {
-            console.error('Error exporting user data to Excel:', err);
-            throw err;
-        }
-    },
          
-    // Method to export user data to Excel
-    async exportUsersDataByName(nombre) {
-        try {
-            const users = await this.getUserByNombre(nombre); // Use the corrected method
-            if (!users || users.length === 0) {
-                throw new Error('No users found');
-            }
-
-            // Create a new workbook
-            const wb = XLSX.utils.book_new();
-
-            // Create a worksheet from user data
-            const ws = XLSX.utils.json_to_sheet(users, {
-                header: ['id', 'nombre', 'apellido', 'cedula', 'correo']
-            });
-
-            // Append the worksheet to the workbook
-            XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
-
-            // Convert workbook to buffer
-            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
-
-            return excelBuffer;
-        } catch (err) {
-            console.error('Error exporting user data to Excel:', err);
-            throw err;
-        }
-    },
-
+  
 
     async addMultipleUser(users){
         const queries = users.map(user=>{
@@ -255,7 +180,10 @@ async exportUserData(id){
 
     },
 
-    
+    async findUserByGoogleId(googleId){
+        const result = await _query('SELECT * FROM usuario WHERE google_id = ?', [googleId]);
+        return result;
+    }
 
 };
 
