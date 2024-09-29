@@ -18,14 +18,11 @@ router.get('/users/searchUser',userController.searchUsers);
 //Ruta para obtener el perfi de los usuarios
 router.get('/users/getperfil',authenticateToken ,userController.getPerfil)
 
-//Ruta para exportar los datos de un usuario
-router.get('/users/export/name',userController.exportUsersDataByName)
+
 
 //Ruta para obtener el historial de ingresos del usuario por el nombre
 router.get('/users/loginHistorial',userController.getLoginHistory)
 
-//Ruta para exportar los datos de los usuarios 
-router.get('/users/export', userController.exportUsersData);
 
 
 //Ruta para obtener el perfil del usuario
