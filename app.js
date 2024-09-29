@@ -12,8 +12,9 @@ import exportRoutes from './routes/exportRoutes.js'
 import passport from 'passport';
 import authRoutes from './routes/authRoutes.js';  // Rutas de autenticación
 import './controllers/authControllers.js';  // Asegúrate de que se configure passport
-
-
+import './controllers/authFacebookControllers.js'
+import './controllers/authGithubControllers.js'
+import './controllers/authTwitterControllers.js'
 const app = express();
 
 
