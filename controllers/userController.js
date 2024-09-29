@@ -3,9 +3,9 @@ import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
-import UserModel from '../models/userModels.js'
+//import UserModel from '../models/userModels.js'
 import redis from '../db/redis.js'
-//import UserModel from '../models/firebase/userModel_firebase.js'
+import UserModel from '../models/firebase/userModel_firebase.js'
 
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
@@ -87,14 +87,13 @@ const addUser = async (req, res) => {
         return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
     }
 
-    const connection = await pool.getConnection(); // Obtener conexión desde el pool
     try {
-        await connection.beginTransaction();
+    
 
         const existingUser = await UserModel.existingCedula(cedula)
 
         if (existingUser) {
-            await connection.rollback();
+            
             return res.status(400).json({ error: 'Usuario ya existe' });
         }
 
@@ -110,10 +109,9 @@ const addUser = async (req, res) => {
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
         
-        await connection.rollback();
         res.status(500).json({ error: 'Error interno del servidor' });
     } finally {
-        connection.release(); // Liberar la conexión después de usarla
+
     }
 };
 
@@ -473,56 +471,7 @@ const getUsersWithPagination = async (req,res)=>{
     }
 }
 
-// Controller to export user data to Excel
-const exportUserData = async (req, res) => {
-    const { id } = req.params;
 
-    try {
-        const excelBuffer = await UserModel.exportUserData(id);
-
-        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.send(excelBuffer);
-    } catch (err) {
-        console.error('Error al exportar los datos del usuario a Excel:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-};
-
-
-// Controller to export user data to Excel
-const exportUsersData = async (req, res) => {
-   
-
-    try {
-        const excelBuffer = await UserModel.exportUsersData();
-
-        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.send(excelBuffer);
-    } catch (err) {
-        console.error('Error al exportar los datos del usuario a Excel:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-};
-
-
-
-// Controller to export user data to Excel
-const exportUsersDataByName = async (req, res) => {
-   const {nombre} =req.query
-
-    try {
-        const excelBuffer = await UserModel.exportUsersDataByName(nombre);
-
-        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.send(excelBuffer);
-    } catch (err) {
-        console.error('Error al exportar los datos del usuario a Excel:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-};
 
 
 
@@ -581,7 +530,7 @@ const addMultipleUsers = async (req,res)=>{
        imagePath
       })
     // Llamar a la función de inserción de múltiples productos en el modelo
-    const [result] = await UserModel.addMultipleUser(usersToInsert)
+    const result = await UserModel.addMultipleUser(usersToInsert)
   
     createdUsers.push({ id: result.insertId, name });
   
@@ -715,9 +664,6 @@ export default {
     getUserPerfil,
     getLoginHistory,
     getUsersWithPagination,
-    exportUserData,
-    exportUsersData,
-    exportUsersDataByName,
     addMultipleUsers,
     deleteMultipleUsers
 };
