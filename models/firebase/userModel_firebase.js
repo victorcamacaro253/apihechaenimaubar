@@ -346,6 +346,31 @@ async updateUser(id,updateFields,values){
     console.error('Error actualizando el usuario:', error);
     throw error; // Lanzar el error para manejarlo en el controlador
   }
+},
+
+async addMultipleUser(users){
+  try{
+    const  batch = db.batch();
+    const usersCollection=  db.collection('usuarios');
+
+    users.forEach(user=>{
+      const { name, apellido, cedula, email, hashedPassword } = user;
+  
+      const userDocRef = usersCollection.doc();
+      batch.set(userDocRef, {
+        name: user.name,
+        apellido: user.apellido,
+        cedula: user.cedula,
+        email: user.email,
+        password: user.hashedPassword, // Contraseña hasheada
+        imagePath: user.imagePath,
+        createdAt: new Date() // Añadimos un timestamp
+      });
+    });
+    await batch.commit();
+  }catch(error){
+    console.error('Error agregando usuarios:', error);
+  }
 }
 
 }
