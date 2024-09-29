@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 21-09-2024 a las 05:37:11
+-- Tiempo de generación: 30-09-2024 a las 00:38:39
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -87,7 +87,8 @@ INSERT INTO `historial_ingresos` (`id`, `id_usuario`, `fecha`, `codigo`) VALUES
 (7, 3, '2024-08-24 12:53:37', '19e227ef6a463a85'),
 (8, 3, '2024-08-24 13:12:50', 'a4035622cc989068'),
 (9, 3, '2024-08-25 15:14:21', '853aa34d25eda16b'),
-(10, 3, '2024-08-25 15:56:17', '6802c5076998ac73');
+(10, 3, '2024-08-25 15:56:17', '6802c5076998ac73'),
+(11, 3, '2024-09-22 13:57:47', '22a64e029c7afca9');
 
 -- --------------------------------------------------------
 
@@ -104,22 +105,25 @@ CREATE TABLE `productos` (
   `stock` int(50) NOT NULL,
   `id_categoria` int(50) NOT NULL,
   `activo` enum('activo','inactivo') NOT NULL,
-  `id_proveedor` int(50) NOT NULL
+  `id_proveedor` int(50) NOT NULL,
+  `imagen` varchar(250) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `productos`
 --
 
-INSERT INTO `productos` (`id_producto`, `codigo`, `nombre_producto`, `descripcion`, `precio`, `stock`, `id_categoria`, `activo`, `id_proveedor`) VALUES
-(1, '001', 'carne', 'es una carne', 200.00, 10, 2, 'activo', 1),
-(2, '002', 'carne', 'es una carne', 200.00, 10, 2, 'activo', 1),
-(3, '000C7276', 'cama', 'es una cama', 150.00, 15, 1, 'activo', 1),
-(4, '9847FCEE', 'zapato', 'es una cama', 150.00, 15, 1, 'activo', 1),
-(5, 'EF647CAD', 'zapato1', 'es una cama', 150.00, 15, 1, 'activo', 1),
-(6, 'E2A247B7', 'zapato2', 'es una cama', 150.00, 20, 1, 'activo', 1),
-(7, 'DF80AF3D', 'zapato3', 'es una cama', 150.00, 205, 1, 'activo', 1),
-(8, '3A9E991C', 'zapato4', 'es una cama', 150.00, 205, 1, 'activo', 1);
+INSERT INTO `productos` (`id_producto`, `codigo`, `nombre_producto`, `descripcion`, `precio`, `stock`, `id_categoria`, `activo`, `id_proveedor`, `imagen`) VALUES
+(1, '001', 'carne', 'es una carne', 200.00, 10, 2, 'activo', 1, '0'),
+(2, '002', 'carne', 'es una carne', 200.00, 10, 2, 'activo', 1, '0'),
+(3, '000C7276', 'cama', 'es una cama', 150.00, 15, 1, 'activo', 1, '0'),
+(12, '684C98ED', 'zapato1', 'es una cama', 1000.00, 15, 1, 'activo', 1, '0'),
+(13, '684C98ED', 'zapato1', 'es una cama', 1000.00, 15, 1, 'activo', 1, '0'),
+(14, 'F5C143B5', 'zapato2', 'es una cama', 800.00, 20, 1, 'activo', 1, '0'),
+(15, '3FE1D4DA', 'colchon', 'es una colchon', 1230.00, 15, 1, 'activo', 1, '0'),
+(16, '2CF7AB4A', 'regla ', 'es una regla', 1230.00, 15, 1, 'activo', 1, '0'),
+(17, 'BF46A710', 'impresora epson', 'impresora para trabajar h', 1340.00, 20, 1, 'activo', 1, '0'),
+(18, '2CF7AB4A', 'regla ', 'es una regla', 1230.00, 15, 1, 'activo', 1, '0');
 
 -- --------------------------------------------------------
 
@@ -171,25 +175,44 @@ INSERT INTO `proveedor` (`id_proveedor`, `codigo`, `nombre`, `direccion`) VALUES
 
 CREATE TABLE `usuario` (
   `id` int(50) NOT NULL,
+  `google_id` mediumtext DEFAULT NULL,
+  `facebook_id` text DEFAULT NULL,
+  `github_id` text NOT NULL,
+  `twitter_id` text NOT NULL,
   `nombre` varchar(250) NOT NULL,
-  `apellido` varchar(250) NOT NULL,
-  `cedula` varchar(250) NOT NULL,
-  `correo` varchar(250) NOT NULL,
-  `contraseña` varchar(250) NOT NULL
+  `apellido` varchar(250) DEFAULT NULL,
+  `cedula` varchar(250) DEFAULT NULL,
+  `correo` varchar(250) DEFAULT NULL,
+  `contraseña` varchar(250) DEFAULT NULL,
+  `imagen` varchar(250) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `usuario`
 --
 
-INSERT INTO `usuario` (`id`, `nombre`, `apellido`, `cedula`, `correo`, `contraseña`) VALUES
-(1, 'victor', 'camacaro', '27119364', 'victor@gmail.com', '27119364'),
-(2, 'edimary', 'parra', '1234567', 'edir@gmail.com', '$2b$10$M2c0dcYswWGrqLdocAcTheeLUYkdSYrpED.oCL3KiNmM8KGoisNmC'),
-(3, 'mirlangel', 'cortez', '28098765', 'mirla@gmail.com', '$2b$10$hrCmVUKGh9io79wOCWo6IekWw7PzfvTBFkdBzjXE4aN.NBlvDRxBu'),
-(4, 'mirlangel5', 'cortez', '28098764', 'mirla@gmail.com', '$2b$10$.zu2KjsbSQ/RHQdylh.gZ.Jfs9tl6W1mbN.UOWdZlGdkNBEAb.EZW'),
-(5, 'mirlangel', 'cortez', '28098763', 'mirla@gmail.com', '$2b$10$aQ2RLU6eGod0FSqI5QiXguoPGbrkCAAsl5LtdHMyLbbNbiDiF9noW'),
-(6, 'mirlangel', 'cortez', '28098753', 'mirla@gmail.com', '$2b$10$.nm9yS.4lF74GY3PofCnR.k8TElvOlEBNcupHs8gMzyLykfPbYOjm'),
-(7, 'mirlangel', 'cortez', '28098743', 'mirla@gmail.com', '$2b$10$MHOBNY7TZd8IvjfJoy6ZNOWInTKtanfODa9ez94lHwfK2T/e9CXre');
+INSERT INTO `usuario` (`id`, `google_id`, `facebook_id`, `github_id`, `twitter_id`, `nombre`, `apellido`, `cedula`, `correo`, `contraseña`, `imagen`) VALUES
+(1, '234565', '', '', '', 'victor', 'camacaro', '27119364', 'victor@gmail.com', '27119364', ''),
+(2, '0', '', '', '', 'edimary', 'parra', '1234567', 'edir@gmail.com', '$2b$10$M2c0dcYswWGrqLdocAcTheeLUYkdSYrpED.oCL3KiNmM8KGoisNmC', ''),
+(3, '0', '', '', '', 'mirlangel', 'cortez', '28098765', 'mirla@gmail.com', '$2b$10$hrCmVUKGh9io79wOCWo6IekWw7PzfvTBFkdBzjXE4aN.NBlvDRxBu', ''),
+(4, '0', '', '', '', 'mirlangel5', 'cortez', '28098764', 'mirla@gmail.com', '$2b$10$.zu2KjsbSQ/RHQdylh.gZ.Jfs9tl6W1mbN.UOWdZlGdkNBEAb.EZW', ''),
+(5, '0', '', '', '', 'mirlangel', 'cortez', '28098763', 'mirla@gmail.com', '$2b$10$aQ2RLU6eGod0FSqI5QiXguoPGbrkCAAsl5LtdHMyLbbNbiDiF9noW', ''),
+(6, '0', '', '', '', 'mirlangel', 'cortez', '28098753', 'mirla@gmail.com', '$2b$10$.nm9yS.4lF74GY3PofCnR.k8TElvOlEBNcupHs8gMzyLykfPbYOjm', ''),
+(7, '0', '', '', '', 'mirlangel', 'cortez', '28098743', 'mirla@gmail.com', '$2b$10$MHOBNY7TZd8IvjfJoy6ZNOWInTKtanfODa9ez94lHwfK2T/e9CXre', ''),
+(8, '0', '', '', '', 'julio', 'linarez', '28250543', 'julio@gmail.com', '$2b$10$aDfl7oXGpqBMUSp/mDM5oOC2gEd6yiX33MvzUaJYaH8qV1dTjleg.', ''),
+(9, '0', '', '', '', 'victor', 'camacaro', '27119364', 'victor@gmail.com', '$2b$10$B5hgQvKGwC6fR5JS1K8BGOj5Fu832DRWTgCUqmCTIF6oWXT03KmGi', NULL),
+(10, '0', '', '', '', 'victor', 'camacaro', '27119364', 'victor@gmail.com', '$2b$10$B5hgQvKGwC6fR5JS1K8BGOj5Fu832DRWTgCUqmCTIF6oWXT03KmGi', NULL),
+(11, '0', '', '', '', 'victor', 'camacaro', '27119364', 'victor@gmail.com', '$2b$10$Mj9g8JWZuc0AndkoswvChOWCsqQGAEhq/P2Pt5uLf8r6ofN7bWFmK', NULL),
+(12, '0', '', '', '', 'victor', 'camacaro', '27119364', 'victor@gmail.com', '$2b$10$W0rQMvX.DZZmqGjTDqWKMOc873RyH2NCXV.68KRpA..uRQiMgTlAi', NULL),
+(13, '0', '', '', '', 'victor', 'camacaro', '27119364', 'victor@gmail.com', '$2b$10$W0rQMvX.DZZmqGjTDqWKMOc873RyH2NCXV.68KRpA..uRQiMgTlAi', NULL),
+(14, '0', '', '', '', 'victor', 'camacaro', '27119364', 'victor@gmail.com', '$2b$10$DfLsB0EFX3BxJ67wlxkqceDrvcCOZubJzNUdMZi.KS3LNfKnHTmFq', NULL),
+(18, '0', '', '', '', 'Roxana', 'camacaro', '178364792', 'victor@gmail.com', '$2b$10$J8cUtCiDtAXewseFA2gTUecCRs./cYEBDCba1j4rUwIjPXwDJ0PNK', NULL),
+(19, '0', '', '', '', 'Roxana', 'camacaro', '178364792', 'victor@gmail.com', '$2b$10$J8cUtCiDtAXewseFA2gTUecCRs./cYEBDCba1j4rUwIjPXwDJ0PNK', NULL),
+(20, '0', '', '', '', 'maria', 'zuloaga', '17564839', 'victor@gmail.com', '$2b$10$Yr2b2geINw9NBE.cdYa6lexDoEPj4OBC3mclCx0KACdIETId.xNfW', NULL),
+(53, '110035801504866355317', '', '', '', 'Victor Camacaro', NULL, NULL, 'victorcamacaro253@gmail.com', NULL, NULL),
+(57, NULL, '9059991824015203', '', '', 'Victor Manuel Camacaro', NULL, NULL, 'elpikitiki4@gmail.com', NULL, 'https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=9059991824015203&height=50&width=50&ext=1730224038&hash=AbZ7dJFwbdWIA3ymyI_dsJqZ'),
+(59, NULL, NULL, '74551928', '', 'Victor C', NULL, NULL, 'victorcamacaro253@gmail.com', NULL, 'https://avatars.githubusercontent.com/u/74551928?v=4'),
+(60, NULL, NULL, '', '1311735386134241280', 'Victor Manuel', NULL, NULL, NULL, NULL, 'https://pbs.twimg.com/profile_images/1693121510557319168/b7nl9wgP_normal.jpg');
 
 --
 -- Índices para tablas volcadas
@@ -263,13 +286,13 @@ ALTER TABLE `compras`
 -- AUTO_INCREMENT de la tabla `historial_ingresos`
 --
 ALTER TABLE `historial_ingresos`
-  MODIFY `id` int(50) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(50) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de la tabla `productos`
 --
 ALTER TABLE `productos`
-  MODIFY `id_producto` int(50) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id_producto` int(50) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT de la tabla `productos_compras`
@@ -287,7 +310,7 @@ ALTER TABLE `proveedor`
 -- AUTO_INCREMENT de la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `id` int(50) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(50) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- Restricciones para tablas volcadas
