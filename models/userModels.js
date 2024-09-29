@@ -34,14 +34,14 @@ const UserModel = {
             return result;
     },
     async addUserGoogle({ google_id, nombre, correo, imagen }) {
-        const result = await _query('INSERT INTO usuario (google_id, nombre, correo,jose, imagen) VALUES (?, ?, ?, ?)',
+        const result = await _query('INSERT INTO usuario (google_id, nombre, correo, imagen) VALUES (?, ?, ?, ?)',
             [google_id, nombre, correo, imagen]
         );
     
-
+     // Ahora, busca el usuario insertado usando su ID
+  const insertedUser = await _query('SELECT * FROM usuario WHERE id = ?', [result.insertId]);
     
-        // Verifica que el usuario existe antes de retornarlo
-        return result; // Retorna null si no se encuentra el usuario
+  return insertedUser[0]; // Asegúrate de retornar solo el primer resultado
     },
     
     
@@ -179,10 +179,10 @@ async getUsersWithPagination(limit,offset){
         return result
 
     },
-
-    async findUserByGoogleId(googleId){
-        const result = await _query('SELECT * FROM usuario WHERE google_id = ?', [googleId]);
-        return result;
+    async findUserByGoogleId(googleId) {
+        const query = 'SELECT * FROM usuario WHERE google_id = ?';
+        const [rows] = await _query(query, [googleId]);
+        return rows;
     }
 
 };
