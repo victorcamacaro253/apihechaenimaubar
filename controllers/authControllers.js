@@ -9,33 +9,39 @@ passport.use(new GoogleStrategy({
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: 'http://localhost:3000/auth/google/callback',
   },
-async (accessToken, refreshToken, profile, done) => {
+  async (accessToken, refreshToken, profile, done) => {
     try {
-      // Verificar si el usuario ya existe
-      const [rows] = await pool.query("SELECT * FROM usuario WHERE google_id = ?", [profile.id]);
+        // Verificar si el usuario ya existe en la base de datos usando google_id
+        let rows = await UserModel.findUserByGoogleId(profile.id);
+        console.log(rows)
+        // Verificar si `rows` está definido y si es un array
+        if (rows) {
+            // Si el usuario ya existe, devolver el usuario encontrado
+            console.log('El usuario ya existe:', rows);
+            return done(null, rows);
+        } else {
+            // Si el usuario no existe, se crea uno nuevo
+            const newUser = {
+                google_id: profile.id,
+                nombre: profile.displayName,
+                correo: profile.emails[0].value,
+                imagen: profile.photos[0].value
+            };
 
-      if (rows.length > 0) {
-        // Usuario ya existe, continuar
-        return done(null, rows[0]);
-      } else {
-        // Nuevo usuario, insertar en la base de datos
-        const result = await pool.query("INSERT INTO usuario (google_id, nombre, correo) VALUES (?, ?, ?)", [
-          profile.id, profile.displayName, profile.emails[0].value
-        ]);
+            console.log('Creando un nuevo usuario:', newUser);
 
-        const newUser = {
-          id: result.insertId,
-          google_id: profile.id,
-          nombre: profile.displayName,
-          correo: profile.emails[0].value
-        };
+            // Agregar el usuario nuevo a la base de datos
+            const createdUser = await UserModel.addUserGoogle(newUser);
 
-        return done(null, newUser);
-      }
+            // Retornar el usuario recién creado
+            return done(null, createdUser);
+        }
     } catch (error) {
-      return done(error, null);
+        // Manejo de errores en caso de que ocurra un problema
+        return done(error, null);
     }
-  }
+}
+
 
 ));
 
