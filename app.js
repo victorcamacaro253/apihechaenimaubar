@@ -1,4 +1,5 @@
 import express, { json } from 'express';
+import session from 'express-session';
 import userRoutes from './routes/userRoutes.js';
 import productsRoutes from './routes/productsRoutes.js'
 import comprasRoutes from './routes/comprasRoutes.js'
@@ -7,12 +8,26 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import csrf from 'csurf';
- 
+import exportRoutes from './routes/exportRoutes.js' 
+import passport from 'passport';
+import authRoutes from './routes/authRoutes.js';  // Rutas de autenticación
+import './controllers/authControllers.js';  // Asegúrate de que se configure passport
+
 
 const app = express();
 
 
+// Configuración de la sesión
+app.use(session({
+  secret: 'victorcamacaro',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false }  // Cambia a true en producción con HTTPS
+}));
 
+// Inicializa passport y sesiones
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use(helmet())
 
@@ -28,7 +43,10 @@ app.use(helmet.contentSecurityPolicy({
       upgradeInsecureRequests: true,
     },
   }))
-*//
+*/
+// Rutas de autenticación
+app.use(authRoutes);
+
 app.use(cors())
 app.use(json());
 app.use(limiter);
@@ -39,6 +57,10 @@ app.disable('x-powered-by')
 const csrfProtection = csrf({ cookie: true });
 // Middleware para procesar cookies
 app.use(cookieParser());
+
+
+
+
 
 app.get('/',(req,res)=>{
     res.json({ message : 'hola mundo' })
@@ -61,7 +83,7 @@ app.options('/api/users/:id', (req, res) => {
 
 
 //Usa las rutas de usuarios 
-app.use('/api',csrfProtection,userRoutes);
+app.use('/api',userRoutes);
 
 
 //Usa las rutas de productos
@@ -71,6 +93,8 @@ app.use('/api2',productsRoutes);
 //Usa las rutas de las compras
 app.use('/api3',comprasRoutes);
 
+//Usa las rutas para exportar documentos
+app.use('/api4',exportRoutes);
 
 const PORT = process.env.PORT ?? 3000
 
