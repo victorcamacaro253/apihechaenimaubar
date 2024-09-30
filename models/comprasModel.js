@@ -46,11 +46,11 @@ async deleteCompra(id){
 },
 
 async findByDateRange (startDate, endDate){
-    const query = `
+    const SQL = `
         SELECT * FROM compras 
-        WHERE fecha_compra BETWEEN ? AND ?
+        WHERE fecha BETWEEN ? AND ?
     `;
-    const [results] = await pool.query(query, [startDate, endDate]);
+    const results = await query(SQL, [startDate, endDate]);
     return results;
 }
 
