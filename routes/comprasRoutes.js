@@ -12,6 +12,7 @@ router.get('/compras',comprasController.getCompras);
 //Ruta para obtener las compras de un usuario por su nombre
 router.get('/compras/SearchUserCompras/',comprasController.getComprasByUsuario)
 
+router.get('/compra/fecha', comprasController.getComprasByDate);
 
 
 router.get('/compras/comprasByUser',comprasController.getComprasCountByUsuario)
