@@ -53,7 +53,16 @@ async deleteCompra(id){
 async getComprasCountByUsuario(){
     const result = await query('SELECT COUNT(*) as cantidad_compras,nombre,apellido FROM compras INNER JOIN usuario ON compras.id_usuario=usuario.id GROUP BY id_usuario')
     return result;
+},
+    async findByDateRange (startDate, endDate){
+    const SQL = `
+        SELECT * FROM compras 
+        WHERE fecha BETWEEN ? AND ?
+    `;
+    const results = await query(SQL, [startDate, endDate]);
+    return results;
 }
+
 
 }
 export default comprasModel;
