@@ -3,7 +3,7 @@ import PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
 import UserModel from '../models/userModels.js';
 import XLSX from 'xlsx';
-
+import { Parser  } from 'json2csv';
 
 
 const exportUsersData = async (req,res)=>{
@@ -221,6 +221,54 @@ const exportUserDataByIdPdf = async (req,res)=>{
 }
 
 
+const exportUserDataToCsv = async (req,res)=>{
+
+   try {
+    const users = await UserModel.getAllUsers()
+
+
+    if (!users || users.length === 0) {
+        throw new Error('No users found');
+    }
+
+    const fields= ['id','nombre','apellido','cedula','corrreo']
+    const json2csvParser = new Parser({fields})
+    const csv = json2csvParser.parse(users)
+    res.setHeader('Content-Disposition', 'attachment; filename="user_data.csv"');
+    res.setHeader('Content-Type', 'text/csv');
+    res.send(csv);
+ 
+   } catch (error) {
+    console.error('Error al exportar los datos del usuario a CSV:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+   }
+}
+
+
+const exportUserDataToCsvByid = async (req,res)=>{
+   const {id}= req.params
+    try {
+     const users = await UserModel.getUserById(id)
+ 
+ 
+     if (!users || users.length === 0) {
+         throw new Error('No users found');
+     }
+ 
+     const fields= ['id','nombre','apellido','cedula','corrreo']
+     const json2csvParser = new Parser({fields})
+     const csv = json2csvParser.parse(users)
+     res.setHeader('Content-Disposition', 'attachment; filename="user_data.csv"');
+     res.setHeader('Content-Type', 'text/csv');
+     res.send(csv);
+  
+    } catch (error) {
+     console.error('Error al exportar los datos del usuario a CSV:', error);
+         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+ }
+
+
 
 
 export default {
@@ -228,5 +276,7 @@ export default {
     exportUserData,
     exportUsersDataByName,
      exportUserDataPdf,
-     exportUserDataByIdPdf 
+     exportUserDataByIdPdf,
+     exportUserDataToCsv,
+     exportUserDataToCsvByid
 }
