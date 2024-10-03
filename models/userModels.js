@@ -174,9 +174,20 @@ try {
     },
 
 
+ async updateUserPassword(hashedPassword,userId){
+    try {
+        
+        const result = await _query('UPDATE usuario SET contraseña = ? WHERE id = ?',[hashedPassword,userId])
+        return result;
+
+    } catch (error) {
+        console.error('Error al obtener usuarios con paginacion',error)
+        throw error;
+    }
+ }
+
+
 };
-
-
 
 
 export default  UserModel ;
