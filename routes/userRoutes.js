@@ -2,7 +2,7 @@ import { Router } from 'express';
 const router = Router();
 import userController from '../controllers/userController.js';
 import authenticateToken from '../middleware/authenticationToken.js';
-import comprasController from '../controllers/comprasController.js';
+
 
 //Ruta para obtener los datos de la base de datos
 
@@ -39,6 +39,10 @@ router.post('/users/addMultipleUsers',userController.addMultipleUsers)
 
 
 router.post('/users/deleteMultipleUsers',userController.deleteMultipleUsers)
+
+router.post('/users/requestPasswordReset',userController.requestPasswordReset)
+
+router.post('/users/resetPassword/:token',userController.resetPassword)
 
 
 export default router;
