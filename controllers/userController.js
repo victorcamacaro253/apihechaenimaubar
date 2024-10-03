@@ -6,6 +6,7 @@ const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes 
 //import UserModel from '../models/userModels.js'
 import redis from '../db/redis.js'
 import UserModel from '../models/firebase/userModel_firebase.js'
+import tokenService from '../services/tokenService.js';
 
 const getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
@@ -581,7 +582,66 @@ const deleteMultipleUsers= async (req,res)=>{
  
  }
  
+ const requestPasswordRequest= async (req,res)=>{
+     const { email } = req.body;
 
+     try{
+     
+     const user = UserModel.findByEmail(email)
+
+        if(!user) {
+        
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        }
+
+
+  const token =  tokenService.generateToken(user.id)
+
+  const emailSent = await sendEmail(email,'Password Reset',`You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
+              `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
+              `http://localhost:3001/resetPassword/${token}\n\n` +
+              `If you did not request this, please ignore this email.\n`)
+   
+              
+              if(!emailSent){
+                return res.status(500).json({ error: 'Error al enviar el correo' })
+              }
+
+
+              res.status(200).json('Rcovery email sent')
+            
+            }catch(error){
+                res.status(500).json({ error: 'Error interno del servidor' },error);
+            }
+
+ }
+
+
+
+ const resetPassword = async (req,res)=>{
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    try {
+        const userId= await tokenService.verifyToken(token)
+
+        if(!userId){
+            return res.status(400).json({ message: 'Invalid or expired token' });
+        }
+
+        const hashedPassword = await hash(newPassword, 10);
+
+        await  UserModel.updatePassword(userId, hashedPassword);
+
+        return res.json({message:'Password has been reset successfully'})
+
+
+    } catch (error) {
+        res.status(500).json({message:' Error reseting password'})
+    }
+
+ }
 
 /*
 const getcorreo = async (req, res) => {
@@ -665,5 +725,7 @@ export default {
     getLoginHistory,
     getUsersWithPagination,
     addMultipleUsers,
-    deleteMultipleUsers
+    deleteMultipleUsers,
+    requestPasswordRequest,
+    resetPassword
 };
