@@ -4,9 +4,8 @@ import {randomBytes} from 'crypto';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
 import UserModel from '../models/userModels.js'
-import PDFDocument from 'pdfkit';
-import { Readable } from 'stream';
-
+import sendEmail from '../services/emailService.js';
+import tokenService from '../services/tokenService.js';
 
 
 const getAllUser = async (req, res) => {
@@ -585,6 +584,54 @@ const getcorreo = async (req, res) => {
 
 */
 
+const requestPasswordReset= async (req,res)=>{
+  const { email }= req.body;
+
+  const user = UserModel.findByEmail(email)
+
+  if(!user){
+    return res.status(404).send('Correo no encontrado')
+  }
+ 
+  const token = tokenService.generateToken(user.id)
+
+  const emailSent = await sendEmail(email,'Password Reset',`You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
+              `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
+              `http://localhost:3001/resetPassword/${token}\n\n` +
+              `If you did not request this, please ignore this email.\n`)
+   
+
+              if (!emailSent) {
+                return res.status(500).send('Error sending email');
+            }
+    
+            res.status(200).send('Recovery email sent');
+
+}
+
+
+const resetPassword= async (req,res)=>{
+    const { token }  = req.params;
+    const {newPassword} = req.body;
+
+    try {
+
+        const userId= await tokenService.verifyToken(token);
+        
+        if(!userId){
+            return res.status(400).json({ message: 'Invalid or expired token' });
+        }
+        const hashedPassword = await hash(newPassword, 10);
+
+        await UserModel.updateUserPassword(userId,hashedPassword)
+
+       return res.status(200).json({ message: 'Password has been reset successfully' });
+        
+    } catch (error) {
+        res.status(500).json({ message: 'Error resetting password', error: error.message });    
+    }
+}
+
 export default {
     getAllUser,
     getUserById,
@@ -599,5 +646,7 @@ export default {
     getLoginHistory,
     getUsersWithPagination,
     addMultipleUsers,
-    deleteMultipleUsers
+    deleteMultipleUsers,
+    requestPasswordReset,
+    resetPassword
 };
