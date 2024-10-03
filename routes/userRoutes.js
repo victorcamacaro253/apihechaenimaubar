@@ -53,6 +53,11 @@ router.post('/users/addMultipleUsers',userController.addMultipleUsers)
 //Ruta para eliminar multiple usuarios
 router.post('/users/deleteMultipleUsers',userController.deleteMultipleUsers)
 
+//Ruta para solicitar el password reset
+router.post('/users/requestPasswordRequest',userController.requestPasswordReset)
+
+//Ruta para resetear el password
+router.post('/users/resetPassword/:token',userController.resetPassword)
 
 //Ruta para actualizar un usuario
 
