@@ -2,6 +2,7 @@ import { pool } from '../db/db1.js'; // Asegúrate de que 'pool' es una instanci
 import comprasModel from '../models/comprasModel.js';
 import ProductModel from '../models/productModel.js';
 import httpHelpers from '../helpers/httpHelper.js';
+import UserModel from '../models/userModels.js';
 
 
 
@@ -200,7 +201,7 @@ const getComprasByDate = async (req, res) => {
 
   try {
       // Consultar la base de datos para obtener las compras en el rango de fechas
-      const compras = await compraModel.findByDateRange(formattedStartDate, formattedEndDate);
+      const compras = await comprasModel.findByDateRange(formattedStartDate, formattedEndDate);
       res.status(200).json(compras);
   } catch (error) {
       console.error('Error obteniendo compras por fecha:', error);
@@ -209,4 +210,87 @@ const getComprasByDate = async (req, res) => {
 };
 
 
-export default {getCompras,compraProduct,deleteCompra,getCompraById,getComprasByDate};
+const getComprasByUserId = async (req, res) => {
+  const { userId } = req.params;
+  console.log(userId);
+
+  if (!userId) {
+    return res.status(400).json({ error: 'No se proporcionó un Id' });
+  }
+
+  try {
+    const result = await comprasModel.getComprasByUserId(userId);
+    if (!result.length) {  // Cambiar para verificar si hay resultados
+      return res.status(400).json({ error: 'No se encontraron compras para el id proporcionado' });
+    }
+
+    // Procesar los resultados
+    const compraAgrupada = {};
+
+    result.forEach(row => {
+      if (!compraAgrupada[row.id_compra]) {
+        compraAgrupada[row.id_compra] = {
+          id_compra: row.id_compra,
+          fecha: row.fecha,
+          usuario: {
+            id: row.id_usuario,
+            nombre: row.nombre,
+            apellido: row.apellido,
+            cedula: row.cedula,
+            correo: row.correo,
+          },
+          productos: []
+        };
+      }
+
+      // Agregar el producto a la compra
+      compraAgrupada[row.id_compra].productos.push({
+        id_producto: row.id_producto,
+        cantidad: row.cantidad,
+        precio: row.precio
+      });
+    });
+
+    return res.json(Object.values(compraAgrupada));
+    
+  } catch (error) {
+    console.error('Error obteniendo compras por el id del usuario', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+
+const getComprasByusername= async (req,res)=>{
+
+      const {nombre}=req.query
+
+      console.log(nombre)
+
+      if (!nombre) {
+        
+        return res.status(400).json({ error: 'No se proporciono un nombre' });
+       
+      }
+     
+      try {
+        
+  const result = await comprasModel.getComprasByUsername(nombre)
+
+   if(!result){
+    return    res.status(400).json({error:'No se proporciono'})
+   }
+
+   return res.json(result)
+
+
+      } catch (error) {
+        console.error('Error obteniendo compras por el nombre del usuario', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+      }
+
+      }
+
+  
+
+
+export default {getCompras,compraProduct,deleteCompra,getCompraById,getComprasByDate,getComprasByUserId,getComprasByusername};
