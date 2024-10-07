@@ -1,9 +1,12 @@
 import { query as _query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
-//import UserModel from '../models/userModels.js';
+import UserModel from '../models/userModels.js';
+import comprasModel from '../models/comprasModel.js';
 import XLSX from 'xlsx';
-import UserModel from '../models/firebase/userModel_firebase.js'
+import { Parser  } from 'json2csv';
+import { json } from 'express';
+import { Console } from 'console';
 
 
 const exportUsersData = async (req,res)=>{
@@ -74,12 +77,13 @@ const exportUserData = async (req,res)=>{
       const excelBuffer = XLSX.write(wb,{bookType:'xlsx',type:'buffer'})
 
       
+
    
         res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.send(excelBuffer);
 
-       
+        return excelBuffer
     } catch (error) {
         console.error('Error al exportar los datos del usuario a Excel:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -213,11 +217,147 @@ const exportUserDataByIdPdf = async (req,res)=>{
         // Finaliza el PDF y envíalo como respuesta
         doc.end();
         stream.pipe(res);
-    } catch (error) {
-        console.error('Error al exportar los datos del usuario a PDF:', error);
+    } catch (err) {
+        console.error('Error al exportar los datos del usuario a PDF:', err);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 }
+
+
+const exportUserDataToCsv = async (req,res)=>{
+
+   try {
+    const users = await UserModel.getAllUsers()
+
+
+    if (!users || users.length === 0) {
+        throw new Error('No users found');
+    }
+
+    const fields= ['id','nombre','apellido','cedula','corrreo']
+    const json2csvParser = new Parser({fields})
+    const csv = json2csvParser.parse(users)
+    res.setHeader('Content-Disposition', 'attachment; filename="user_data.csv"');
+    res.setHeader('Content-Type', 'text/csv');
+    res.send(csv);
+ 
+   } catch (error) {
+    console.error('Error al exportar los datos del usuario a CSV:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+   }
+}
+
+
+const exportUserDataToCsvByid = async (req,res)=>{
+   const {id}= req.params
+    try {
+     const users = await UserModel.getUserById(id)
+ 
+ 
+     if (!users || users.length === 0) {
+         throw new Error('No users found');
+     }
+ 
+     const fields= ['id','nombre','apellido','cedula','corrreo']
+     const json2csvParser = new Parser({fields})
+     const csv = json2csvParser.parse(users)
+     res.setHeader('Content-Disposition', 'attachment; filename="user_data.csv"');
+     res.setHeader('Content-Type', 'text/csv');
+     res.send(csv);
+  
+    } catch (error) {
+     console.error('Error al exportar los datos del usuario a CSV:', error);
+         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+ }
+
+
+ const exportUserDataToJson= async (req,res)=>{
+    try {
+        
+        const users= await UserModel.getAllUsers()
+        console.log(users)
+        if (users.length === 0) {
+            return res.status(404).json({ message: "No se encontraron usuarios." });
+        }
+
+        res.setHeader('Content-Type','application/json')
+        res.send(JSON.stringify(users,null,2))
+
+    } catch (error) {
+        console.error('Error al exportar los datos del usuario a JSON:', error);
+         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+ }
+
+
+ const exportComprasUserData = async (req, res) => {
+    const {id}= req.params
+    try {
+        const purchases = await comprasModel.getComprasByUserId(id);
+
+        if (!purchases || purchases.length === 0) {
+            throw new Error('No purchases found');
+        }
+
+        // Agrupar las compras
+        const groupedPurchases = {};
+
+        purchases.forEach(row => {
+            if (!groupedPurchases[row.id_compra]) {
+                // Si aún no existe la compra, la crea
+                groupedPurchases[row.id_compra] = {
+                    id_compra: row.id_compra,
+                    fecha: row.fecha,
+                    nombre: row.nombre,
+                    apellido: row.apellido,
+                    cedula: row.cedula,
+                    correo: row.correo,
+                    productos: [] // Inicializa el array de productos
+                };
+            }
+
+            // Agregar el producto a la lista de productos
+            groupedPurchases[row.id_compra].productos.push({
+                id_producto: row.id_producto,
+                nombre_producto: row.nombre_producto,
+                cantidad: row.cantidad,
+                precio: row.precio
+            });
+        });
+
+        // Convertir el objeto agrupado en un array
+        const finalPurchases = Object.values(groupedPurchases).map(purchase => ({
+            ...purchase,
+            productos: purchase.productos.map(product => `ID: ${product.id_producto},nombre:${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`).join('; ')
+        }));
+
+        // Crear un nuevo libro de trabajo
+        const wb = XLSX.utils.book_new();
+
+        // Crear una hoja de trabajo desde los datos agrupados
+        const ws = XLSX.utils.json_to_sheet(finalPurchases, {
+            header: ['id_compra', 'fecha', 'nombre', 'apellido', 'cedula', 'correo', 'productos']
+        });
+
+        // Agregar la hoja de trabajo al libro
+        XLSX.utils.book_append_sheet(wb, ws, 'Compras');
+
+        // Convertir el libro a un buffer
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+        // Configurar las cabeceras para la descarga
+        res.setHeader('Content-Disposition', 'attachment; filename="purchases_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+
+        return excelBuffer;
+
+    } catch (error) {
+        console.error('Error al exportar los datos de las compras a Excel:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
 
 
 
@@ -227,5 +367,11 @@ export default {
     exportUserData,
     exportUsersDataByName,
      exportUserDataPdf,
-     exportUserDataByIdPdf 
+     exportUserDataByIdPdf,
+     exportUserDataToCsv,
+     exportUserDataToCsvByid,
+     exportUserDataToJson,
+     exportComprasUserData
 }
+
+
