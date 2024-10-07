@@ -105,11 +105,13 @@ const compraProduct = async (req, res) => {
   }
 
   // Validar productos
+  let totalCompra=0
   for (const producto of productos) {
     const { id_producto, cantidad, precio } = producto;
     if (!id_producto || !cantidad || !precio || isNaN(cantidad) || cantidad <= 0 || isNaN(precio) || precio <= 0) {
       return res.status(400).json({ error: 'Datos de producto inválidos' });
     }
+    totalCompra += cantidad * precio; // Sumar al total
   }
 
   // Iniciar transacción
@@ -132,7 +134,7 @@ const compraProduct = async (req, res) => {
     }
 
     // Insertar la compra
-    const id_compra = await comprasModel.addCompra(connection, id_usuario);
+    const id_compra = await comprasModel.addCompra(connection, id_usuario,totalCompra);
 
 
     console.log(id_compra)
