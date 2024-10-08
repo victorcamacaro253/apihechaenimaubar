@@ -1,19 +1,19 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+import  get  from 'axios';
+import { load } from 'cheerio';
 
 // URL del sitio web que deseas raspar
-const url = 'http://example.com';
+const url = 'https://www.laliga.com/es-GB/laliga-easports/clasificacion';
 async function scrapeData() {
   try {
     // Realiza una solicitud HTTP a la URL
-    const { data } = await axios.get(url);
+    const { data } = await get(url);
     
     // Carga el HTML en cheerio
-    const $ = cheerio.load(data);
+    const $ = load(data);
 
     // Extrae datos según sea necesario
     // Aquí estamos extrayendo todos los títulos de los elementos <h2>
-    $('p').each((i, element) => {
+    $('.styled__StandingTabHeader-sc-e89col-7').each((i, element) => {
       console.log($(element).text());
     });
   } catch (error) {
