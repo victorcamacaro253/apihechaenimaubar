@@ -36,7 +36,7 @@ async getProductStock(connection,id_producto){
     const [result] = await connection.query('SELECT stock FROM productos WHERE id_producto = ?',[id_producto]);
     return result[0].stock;
 
-},
+}, 
 
 async updateProductStock(connection,id_producto,newStock){
     const result = await connection.query('Update productos SET stock=? WHERE id_producto=?',[newStock,id_producto])
