@@ -10,11 +10,37 @@ import UserModel from '../models/userModels.js';
  
   try {
     
-    const result = await comprasModel.getCompras();
+    const result = await comprasModel.getComprasDetails();
 
-    // httpHelpers.successResponseWithData(res, 'Compras obtenidas exitosamente', result);
-     res.status(200).json(result)
+    // Procesar los resultados
+    const compraAgrupada = {};
 
+    result.forEach(row => {
+      if (!compraAgrupada[row.id_compra]) {
+        compraAgrupada[row.id_compra] = {
+          id_compra: row.id_compra,
+          fecha: row.fecha,
+          total:row.total_compra,
+          usuario: {
+            id: row.id_usuario,
+            nombre: row.nombre,
+            apellido: row.apellido,
+            cedula: row.cedula,
+            correo: row.correo,
+          },
+          productos: []
+        };
+      }
+
+      // Agregar el producto a la compra
+      compraAgrupada[row.id_compra].productos.push({
+        id_producto: row.id_producto,
+        cantidad: row.cantidad,
+        precio: row.precio
+      });
+    });
+
+    return res.json(Object.values(compraAgrupada));
   } catch (error) {
     console.error('Error ejecutando la consulta',error)
  res.status(500).json({error:'Error interno del servidor'});

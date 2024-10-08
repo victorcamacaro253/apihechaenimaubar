@@ -360,6 +360,75 @@ const exportUserDataToCsvByid = async (req,res)=>{
 };
 
 
+const exportComprasData = async (req, res) => {
+    
+    try {
+        const purchases = await comprasModel.getComprasDetails();
+
+        if (!purchases || purchases.length === 0) {
+            throw new Error('No purchases found');
+        }
+
+        // Agrupar las compras
+        const groupedPurchases = {};
+
+        purchases.forEach(row => {
+            if (!groupedPurchases[row.id_compra]) {
+                // Si aún no existe la compra, la crea
+                groupedPurchases[row.id_compra] = {
+                    id_compra: row.id_compra,
+                    fecha: row.fecha,
+                    total:row.total_compra,
+                    nombre: row.nombre,
+                    apellido: row.apellido,
+                    cedula: row.cedula,
+                    correo: row.correo,
+                    productos: [] // Inicializa el array de productos
+                };
+            }
+
+            // Agregar el producto a la lista de productos
+            groupedPurchases[row.id_compra].productos.push({
+                id_producto: row.id_producto,
+                nombre_producto: row.nombre_producto,
+                cantidad: row.cantidad,
+                precio: row.precio
+            });
+        });
+
+        // Convertir el objeto agrupado en un array
+        const finalPurchases = Object.values(groupedPurchases).map(purchase => ({
+            ...purchase,
+            productos: purchase.productos.map(product => `ID: ${product.id_producto},nombre:${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`).join('; ')
+        }));
+
+        // Crear un nuevo libro de trabajo
+        const wb = XLSX.utils.book_new();
+
+        // Crear una hoja de trabajo desde los datos agrupados
+        const ws = XLSX.utils.json_to_sheet(finalPurchases, {
+            header: ['id_compra', 'fecha', 'nombre', 'apellido', 'cedula', 'correo', 'productos']
+        });
+
+        // Agregar la hoja de trabajo al libro
+        XLSX.utils.book_append_sheet(wb, ws, 'Compras');
+
+        // Convertir el libro a un buffer
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+        // Configurar las cabeceras para la descarga
+        res.setHeader('Content-Disposition', 'attachment; filename="purchases_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+
+        return excelBuffer;
+
+    } catch (error) {
+        console.error('Error al exportar los datos de las compras a Excel:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
 
 
 export default {
@@ -371,7 +440,8 @@ export default {
      exportUserDataToCsv,
      exportUserDataToCsvByid,
      exportUserDataToJson,
-     exportComprasUserData
+     exportComprasUserData,
+     exportComprasData
 }
 
 
