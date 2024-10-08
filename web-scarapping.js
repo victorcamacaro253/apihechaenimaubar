@@ -16,6 +16,12 @@ async function scrapeData() {
     $('.styled__StandingTabHeader-sc-e89col-7').each((i, element) => {
       console.log($(element).text());
     });
+
+
+    $('.styled__ContainerAccordion-sc-e89col-11 ').each((i, elements) => {
+      console.log($(elements).text());
+    });
+
   } catch (error) {
     console.error('Error al realizar el scraping:', error);
   }
