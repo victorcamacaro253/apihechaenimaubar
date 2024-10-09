@@ -214,7 +214,7 @@ const deleteCompra = async (req,res) => {
 
 const getComprasByDate = async (req, res) => {
   const { startDate, endDate } = req.query; // Obtener fechas desde los parámetros de consulta
-
+ console.log(startDate,endDate)
   // Validar las fechas
   if (!startDate || !endDate) {
       return res.status(400).json({ error: 'Se requieren startDate y endDate' });
@@ -231,7 +231,41 @@ const getComprasByDate = async (req, res) => {
   try {
       // Consultar la base de datos para obtener las compras en el rango de fechas
       const compras = await comprasModel.findByDateRange(formattedStartDate, formattedEndDate);
-      res.status(200).json(compras);
+
+
+
+    // Procesar los resultados
+    const compraAgrupada = {};
+
+    compras.forEach(row => {
+      if (!compraAgrupada[row.id_compra]) {
+        compraAgrupada[row.id_compra] = {
+          id_compra: row.id_compra,
+          fecha: row.fecha,
+          total:row.total_compra,
+          usuario: {
+            id: row.id_usuario,
+            nombre: row.nombre,
+            apellido: row.apellido,
+            cedula: row.cedula,
+            correo: row.correo,
+          },
+          productos: []
+        };
+      }
+
+      // Agregar el producto a la compra
+      compraAgrupada[row.id_compra].productos.push({
+        id_producto: row.id_producto,
+        cantidad: row.cantidad,
+        precio: row.precio
+      });
+    });
+
+
+    return res.json(Object.values(compraAgrupada));
+
+    
   } catch (error) {
       console.error('Error obteniendo compras por fecha:', error);
       res.status(500).json({ error: 'Error interno del servidor' });
@@ -261,6 +295,7 @@ const getComprasByUserId = async (req, res) => {
         compraAgrupada[row.id_compra] = {
           id_compra: row.id_compra,
           fecha: row.fecha,
+          total:row.total_compra,
           usuario: {
             id: row.id_usuario,
             nombre: row.nombre,
@@ -308,8 +343,35 @@ const getComprasByusername= async (req,res)=>{
    if(!result){
     return    res.status(400).json({error:'No se proporciono'})
    }
+  
+    // Procesar los resultados
+    const compraAgrupada = {};
 
-   return res.json(result)
+    result.forEach(row => {
+      if (!compraAgrupada[row.id_compra]) {
+        compraAgrupada[row.id_compra] = {
+          id_compra: row.id_compra,
+          fecha: row.fecha,
+          usuario: {
+            id: row.id_usuario,
+            nombre: row.nombre,
+            apellido: row.apellido,
+            cedula: row.cedula,
+            correo: row.correo,
+          },
+          productos: []
+        };
+      }
+
+      // Agregar el producto a la compra
+      compraAgrupada[row.id_compra].productos.push({
+        id_producto: row.id_producto,
+        cantidad: row.cantidad,
+        precio: row.precio
+      });
+    });
+
+    return res.json(Object.values(compraAgrupada));
 
 
       } catch (error) {
@@ -320,6 +382,65 @@ const getComprasByusername= async (req,res)=>{
       }
 
   
+      const getComprasByUserDate=async (req,res)=>{
+        const {id}= req.params;
+        const { startDate, endDate } = req.query; // Obtener fechas desde los parámetros de consulta
+        console.log(startDate,endDate)
+         // Validar las fechas
+         if (!startDate || !endDate) {
+             return res.status(400).json({ error: 'Se requieren startDate y endDate' });
+         }
+       
+         // Formatear las fechas (asegúrate de que el formato sea el correcto según tu base de datos)
+         const formattedStartDate = new Date(startDate);
+         const formattedEndDate = new Date(endDate);
+       
+         if (isNaN(formattedStartDate) || isNaN(formattedEndDate)) {
+             return res.status(400).json({ error: 'Fechas inválidas' });
+         }
+       
+         try {
+             // Consultar la base de datos para obtener las compras en el rango de fechas
+             const compras = await comprasModel.findByDateRangeUserId(id,formattedStartDate, formattedEndDate);
+       
+       
+       
+           // Procesar los resultados
+           const compraAgrupada = {};
+       
+           compras.forEach(row => {
+             if (!compraAgrupada[row.id_compra]) {
+               compraAgrupada[row.id_compra] = {
+                 id_compra: row.id_compra,
+                 fecha: row.fecha,
+                 total:row.total_compra,
+                 usuario: {
+                   id: row.id_usuario,
+                   nombre: row.nombre,
+                   apellido: row.apellido,
+                   cedula: row.cedula,
+                   correo: row.correo,
+                 },
+                 productos: []
+               };
+             }
+       
+             // Agregar el producto a la compra
+             compraAgrupada[row.id_compra].productos.push({
+               id_producto: row.id_producto,
+               cantidad: row.cantidad,
+               precio: row.precio
+             });
+           });
+       
+       
+           return res.json(Object.values(compraAgrupada));
+       
+           
+         } catch (error) {
+             console.error('Error obteniendo compras por fecha:', error);
+             res.status(500).json({ error: 'Error interno del servidor' });
+         }
+      }
 
-
-export default {getCompras,compraProduct,deleteCompra,getCompraById,getComprasByDate,getComprasByUserId,getComprasByusername};
+export default {getCompras,compraProduct,deleteCompra,getCompraById,getComprasByDate,getComprasByUserId,getComprasByusername,getComprasByUserDate};

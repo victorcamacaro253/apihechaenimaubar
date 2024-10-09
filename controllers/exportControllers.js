@@ -430,6 +430,175 @@ const exportComprasData = async (req, res) => {
 };
 
 
+const exportComprasDataByName= async (req,res)=>{
+    const {nombre} = req.query
+
+    try {
+        const comprasByUser= await comprasModel.getComprasByUsername(nombre)
+        if (!comprasByUser || comprasByUser.length === 0) {
+            throw new Error('No users found');
+        }
+
+
+
+     // Agrupar las compras
+     const groupedPurchases = {};
+
+     comprasByUser.forEach(row => {
+         if (!groupedPurchases[row.id_compra]) {
+             // Si aún no existe la compra, la crea
+             groupedPurchases[row.id_compra] = {
+                 id_compra: row.id_compra,
+                 fecha: row.fecha,
+                 total:row.total_compra,
+                 nombre: row.nombre,
+                 apellido: row.apellido,
+                 cedula: row.cedula,
+                 correo: row.correo,
+                 productos: [] // Inicializa el array de productos
+             };
+         }
+
+         // Agregar el producto a la lista de productos
+         groupedPurchases[row.id_compra].productos.push({
+             id_producto: row.id_producto,
+             nombre_producto: row.nombre_producto,
+             cantidad: row.cantidad,
+             precio: row.precio
+         });
+     });
+
+
+
+     // Convertir el objeto agrupado en un array
+     const finalPurchases = Object.values(groupedPurchases).map(purchase => ({
+        ...purchase,
+        productos: purchase.productos.map(product => `ID: ${product.id_producto},nombre:${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`).join('; ')
+    }));
+
+
+
+
+
+          // Create a new workbook
+          const wb = XLSX.utils.book_new();
+
+          // Create a worksheet from user data
+          const ws = XLSX.utils.json_to_sheet(finalPurchases, {
+            header: ['id_compra', 'fecha', 'nombre', 'apellido', 'cedula', 'correo', 'productos']
+          });
+
+          // Append the worksheet to the workbook
+          XLSX.utils.book_append_sheet(wb, ws, 'Usuario Compras');
+
+          // Convert workbook to buffer
+          const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+          
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+
+
+          return excelBuffer;
+        
+    } catch (error) {
+        console.error('Error al exportar los datos del usuario a Excel:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}
+
+
+const exportComprasByDate= async (req,res)=>{
+const {startDate,endDate}= req.query;
+console.log(startDate,endDate)
+if(!startDate ||  !endDate){
+  return res.status(400).json({error:'Se requieren start'})  
+}
+
+//Formateamos la fecha
+const formattedStartDate = new Date(startDate)
+const formattedEndDate= new Date(endDate);
+
+if(isNaN(formattedStartDate) || isNaN(formattedEndDate)){
+    return res.status(400).json({error:'Fechas invalidas'})
+}
+
+try {
+
+    const compras= await comprasModel.findByDateRange(formattedStartDate,formattedEndDate)
+
+
+
+
+
+    // Procesar los resultados
+    const compraAgrupada = {};
+
+    compras.forEach(row => {
+      if (!compraAgrupada[row.id_compra]) {
+        compraAgrupada[row.id_compra] = {
+          id_compra: row.id_compra,
+          fecha: row.fecha,
+          total:row.total_compra,
+          usuario: {
+            id: row.id_usuario,
+            nombre: row.nombre,
+            apellido: row.apellido,
+            cedula: row.cedula,
+            correo: row.correo,
+          },
+          productos: []
+        };
+      }
+
+      // Agregar el producto a la compra
+      compraAgrupada[row.id_compra].productos.push({
+        id_producto: row.id_producto,
+        cantidad: row.cantidad,
+        precio: row.precio
+      });
+    });
+
+console.log(compraAgrupada)
+ 
+
+     // Convertir el objeto agrupado en un array
+     const finalPurchases = Object.values(compraAgrupada).map(purchase => ({
+        ...purchase,
+        productos: purchase.productos.map(product => `ID: ${product.id_producto},nombre:${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`).join('; ')
+    }));
+
+
+          // Create a new workbook
+          const wb = XLSX.utils.book_new();
+
+          // Create a worksheet from user data
+          const ws = XLSX.utils.json_to_sheet(finalPurchases, {
+            header: ['id_compra', 'fecha', 'nombre', 'apellido', 'cedula', 'correo', 'productos']
+          });
+
+          // Append the worksheet to the workbook
+          XLSX.utils.book_append_sheet(wb, ws, 'Usuario Compras');
+
+          // Convert workbook to buffer
+          const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+          
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+
+
+          return excelBuffer;
+
+} catch (error) {
+    console.error('Error al exportar los datos del usuario a Excel:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+}
+
+}
+
 
 export default {
     exportUsersData,
@@ -441,7 +610,9 @@ export default {
      exportUserDataToCsvByid,
      exportUserDataToJson,
      exportComprasUserData,
-     exportComprasData
+     exportComprasData,
+     exportComprasDataByName,
+     exportComprasByDate
 }
 
 
