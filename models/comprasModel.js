@@ -14,6 +14,7 @@ const comprasModel= {
         const SQL = `  SELECT 
         c.id_compra, 
         c.fecha, 
+        c.total_compra,
         u.id AS id_usuario, 
         u.nombre, 
         u.apellido, 
@@ -46,9 +47,9 @@ const comprasModel= {
         return result;
     },
 
-async addCompra(connection,id_usuario){
-    const [result]= await connection.query(' INSERT INTO compras (fecha, id_usuario) VALUES (NOW(), ?)',
-            [id_usuario])
+async addCompra(connection,id_usuario,totalCompra){
+    const [result]= await connection.query(' INSERT INTO compras (fecha, id_usuario,total_compra) VALUES (NOW(), ?,?)',
+            [id_usuario,totalCompra])
       return result.insertId; 
 
 },
@@ -77,7 +78,28 @@ async deleteCompra(id){
 
 async findByDateRange (startDate, endDate){
     const SQL = `
-        SELECT * FROM compras 
+         SELECT 
+      c.id_compra, 
+      c.fecha, 
+      c.total_compra,
+      u.id AS id_usuario, 
+      u.nombre, 
+      u.apellido, 
+      u.cedula, 
+      u.correo, 
+      mp.id_producto, 
+      mp.cantidad, 
+      mp.precio,
+      p.nombre_producto
+    FROM 
+      productos_compras AS mp 
+
+      JOIN productos p ON  mp.id_producto = p.id_producto
+    JOIN 
+      compras c ON mp.id_compra = c.id_compra 
+    JOIN 
+      usuario u ON c.id_usuario = u.id 
+
         WHERE fecha BETWEEN ? AND ?
     `;
     const results = await query(SQL, [startDate, endDate]);
@@ -89,6 +111,7 @@ async getComprasByUserId(id){
  const SQL = `  SELECT 
       c.id_compra, 
       c.fecha, 
+      c.total_compra,
       u.id AS id_usuario, 
       u.nombre, 
       u.apellido, 
@@ -119,10 +142,63 @@ async getComprasByUserId(id){
 
 async getComprasByUsername(nombre){
 
-    const SQL= 'SELECT * FROM `productos_compras` as mp JOIN compras c ON mp.id_compra= c.id_compra JOIN usuario u ON c.id_usuario=u.id  WHERE u.nombre = ?';
+    const SQL= ` SELECT 
+      c.id_compra, 
+      c.fecha,
+      c.total_compra, 
+      u.id AS id_usuario, 
+      u.nombre, 
+      u.apellido, 
+      u.cedula, 
+      u.correo, 
+      mp.id_producto, 
+      mp.cantidad, 
+      mp.precio,
+      p.nombre_producto
+    FROM 
+      productos_compras AS mp 
+
+      JOIN productos p ON  mp.id_producto = p.id_producto
+    JOIN 
+      compras c ON mp.id_compra = c.id_compra 
+    JOIN 
+      usuario u ON c.id_usuario = u.id 
+    WHERE 
+      u.nombre = ?;`;
     const results= await query(SQL,[nombre])
 
     return results;
+},
+
+async findByDateRangeUserId (id,startDate,endDate){
+  const SQL = `
+  SELECT 
+c.id_compra, 
+c.fecha, 
+c.total_compra,
+u.id AS id_usuario, 
+u.nombre, 
+u.apellido, 
+u.cedula, 
+u.correo, 
+mp.id_producto, 
+mp.cantidad, 
+mp.precio,
+p.nombre_producto
+FROM 
+productos_compras AS mp 
+
+JOIN productos p ON  mp.id_producto = p.id_producto
+JOIN 
+compras c ON mp.id_compra = c.id_compra 
+JOIN 
+usuario u ON c.id_usuario = u.id 
+
+ WHERE id_usuario =? AND fecha BETWEEN ? AND ?
+`;
+const results = await query(SQL,[id,startDate, endDate]);
+return results;
+
 }
 
 
