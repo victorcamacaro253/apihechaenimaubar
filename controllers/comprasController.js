@@ -382,6 +382,8 @@ const getComprasByusername= async (req,res)=>{
       }
 
   
+
+      
       const getComprasByUserDate=async (req,res)=>{
         const {id}= req.params;
         const { startDate, endDate } = req.query; // Obtener fechas desde los parámetros de consulta
@@ -442,5 +444,7 @@ const getComprasByusername= async (req,res)=>{
              res.status(500).json({ error: 'Error interno del servidor' });
          }
       }
+
+      
 
 export default {getCompras,compraProduct,deleteCompra,getCompraById,getComprasByDate,getComprasByUserId,getComprasByusername,getComprasByUserDate};
