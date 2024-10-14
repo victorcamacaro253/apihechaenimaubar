@@ -16,6 +16,10 @@ router.get('/Products/price',productController.getProductsByPrinceRange)
 
 router.post('/Products/addMultipleProducts',upload.single('image'),productController.addMultipleProducts)
 
+router.get('/Products/meta', productController.getProductsMeta);
+
+router.get('/Products/filter',productController.filterProduct)
+
 
 router.get('/Products/:id',productController.getProductsById)
 

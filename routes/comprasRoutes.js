@@ -1,31 +1,34 @@
 import { Router } from 'express'
 import comprasController from '../controllers/comprasController.js'
 import authenticateToken from '../middleware/authenticationToken.js'
+import userController from '../controllers/userController.js';
 
 
 const router = Router()
 
 
-router.get('/compra',comprasController.getCompras);
+router.get('/compras',comprasController.getCompras);
 
-router.get('/compra/fecha', comprasController.getComprasByDate);
+router.get('/compras/fecha', comprasController.getComprasByDate);
 
-
-router.get('/compra/user/name',comprasController.getComprasByusername)
-
-
-router.get('/compra/user/:userId', comprasController.getComprasByUserId);
+router.get('/compras/:id/userFecha',comprasController.getComprasByUserDate)
 
 
+router.get('/compras/user/name',comprasController.getComprasByusername)
 
-router.get('/compra/:id',comprasController.getCompraById)
+
+router.get('/compras/user/:userId', comprasController.getComprasByUserId);
 
 
 
-router.post('/compra',comprasController.compraProduct);
+router.get('/compras/:id',comprasController.getCompraById)
 
 
-router.delete('/compra/:id',comprasController.deleteCompra);
+
+router.post('/compras',comprasController.compraProduct);
+
+
+router.delete('/compras/:id',comprasController.deleteCompra);
 
 
 export default router;
