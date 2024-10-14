@@ -65,7 +65,52 @@ async addMultipleProducts (connection, products) {
     return result;
 },
 
+/*
+async filterProducts(filters){
 
+  const conditions = {
+    category:'category=?',
+    minPrice:'price>= ?',
+    maxPrice:'price <= ?',
+
+  }
+
+  let query = 'SELECT * FROM  productos WHERE 1=1';
+  const params =[]
+
+  Object.keys(filters).forEach(key => {
+    if (conditions[key]) {
+      query += ` AND ${conditions[key]}`;
+      params.push(filters[key]);
+    }
+  });
+
+  const [rows] = await query(query, params);
+  return rows;
+
+}
+
+*/
+filterProducts: async ({ category, minPrice, maxPrice }) => {
+    let queryl = 'SELECT * FROM productos INNER JOIN categorias ON productos.id_categoria=categorias.id_categoria WHERE 1=1';
+    const params = [];
+  
+    if (category) {
+      queryl += ' AND categorias.categoria = ?';
+      params.push(category);
+    }
+    if (minPrice) {
+      queryl += ' AND precio >= ?';
+      params.push(minPrice);
+    }
+    if (maxPrice) {
+      queryl += ' AND precio <= ?';
+      params.push(maxPrice);
+    }
+  
+    const rows = await query(queryl, params);
+    return rows;
+  }
 
   
 };
