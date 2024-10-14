@@ -1,10 +1,11 @@
 import { query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import crypto from 'crypto'; // Importa crypto si lo necesitas
 import ProductModel from '../models/productModel.js';
+import categoriasModel from '../models/categoriasModel.js';
 
+class productController{
 
-
-const getProducts = async (req,res)=>{
+static getProducts = async (req,res)=>{
     res.header('Access-Control-Allow-Origin','*')
 
     try{
@@ -21,7 +22,7 @@ const getProducts = async (req,res)=>{
 
 
 
-const getProductsById = async (req,res) =>{
+static getProductsById = async (req,res) =>{
     const {id} = req.params
 
     try{
@@ -42,7 +43,7 @@ const getProductsById = async (req,res) =>{
 
 
 
-const addProduct = async (req,res)=>{
+static addProduct = async (req,res)=>{
 
     const { nombre_producto, descripcion, precio,stock,id_categoria,activo = "activo",id_proveedor } = req.body;
     const image = req.file
@@ -102,7 +103,7 @@ const addProduct = async (req,res)=>{
 
 
 
-const deleteProduct= async (req,res) =>{
+static deleteProduct= async (req,res) =>{
     const {id}=  req.params
 
     try {
@@ -123,7 +124,7 @@ const deleteProduct= async (req,res) =>{
 }
 
 
-const getProductsByCategoria=async(req,res)=>{
+static getProductsByCategoria=async(req,res)=>{
  const {categoria} = req.query
 
  try {
@@ -142,7 +143,7 @@ const getProductsByCategoria=async(req,res)=>{
 }
 
 
-const getProductsByPrinceRange= async (req,res)=>{
+static getProductsByPrinceRange= async (req,res)=>{
     const {min,max} = req.query  
 
     if (isNaN(min) || isNaN(max)) {
@@ -169,7 +170,7 @@ const getProductsByPrinceRange= async (req,res)=>{
 
 
 
-const addMultipleProducts = async (req, res) => {
+static addMultipleProducts = async (req, res) => {
     const { products } = req.body;
     const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
 
@@ -264,7 +265,7 @@ const addMultipleProducts = async (req, res) => {
 };
 
 
-const deleteMultipleProducts= async (req,res)=>{
+static deleteMultipleProducts= async (req,res)=>{
     const { products } = req.body
 
 
@@ -288,13 +289,53 @@ const deleteMultipleProducts= async (req,res)=>{
 }
 
 
-export default {
-    getProducts,
-    getProductsById,
-    addProduct,
-    deleteProduct,
-    getProductsByCategoria,
-    getProductsByPrinceRange,
-    addMultipleProducts,
-    deleteMultipleProducts
+static  getProductsMeta= async (req,res)=>{
+
+
+  try {
+    
+ const products = await ProductModel.getAllProducts();
+ const categories= await categoriasModel.getCategories();
+
+ const meta = {
+    cantidad_de_Productos: products.length,
+    categorias:categories.map(category => category.categoria),
+    priceRange: {
+        min: Math.min(...products.map(product => product.precio)),
+        max: Math.min(...products.map(product => product.precio))
+    },
+    countByCategory: categories.reduce((acc,category)=>{
+        acc[category.categoria] = products.filter(product => product.id_categoria === category.id_categoria).length;
+        return acc;
+    },{}),  
+
+   
+ }
+ res.json(meta)
+
+  } catch (error) {
+    console.error('Error ejecutando la consulta:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+
 }
+static filterProduct = async (req, res) => {
+    try {
+      const { category, minPrice, maxPrice } = req.query;
+  
+      const products = await ProductModel.filterProducts(category, minPrice, maxPrice);
+      return res.json(products);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: 'Error filtering products', error });
+    }
+  }
+}
+
+
+
+
+
+
+
+export default productController

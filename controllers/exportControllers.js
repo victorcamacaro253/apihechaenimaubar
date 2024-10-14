@@ -9,7 +9,10 @@ import { json } from 'express';
 import { Console } from 'console';
 
 
-const exportUsersData = async (req,res)=>{
+class exportControllers {
+
+
+static exportUsersData = async (req,res)=>{
     
    try {
 
@@ -50,7 +53,7 @@ const exportUsersData = async (req,res)=>{
 }
 
 
-const exportUserData = async (req,res)=>{
+static exportUserData = async (req,res)=>{
     const { id }= req.params;
 
     try {
@@ -91,7 +94,7 @@ const exportUserData = async (req,res)=>{
 }
 
 
-const exportUsersDataByName= async (req,res)=>{
+static exportUsersDataByName= async (req,res)=>{
     const {nombre} = req.query
 
     try {
@@ -129,7 +132,7 @@ const exportUsersDataByName= async (req,res)=>{
 }
 
 
-const exportUserDataPdf = async(req,res)=>{
+static exportUserDataPdf = async(req,res)=>{
 
     try {
         // Simular la obtención de datos del usuario
@@ -186,7 +189,7 @@ const exportUserDataPdf = async(req,res)=>{
 }
 
 
-const exportUserDataByIdPdf = async (req,res)=>{
+static exportUserDataByIdPdf = async (req,res)=>{
     const {id}= req.params;
 
     try {
@@ -224,7 +227,7 @@ const exportUserDataByIdPdf = async (req,res)=>{
 }
 
 
-const exportUserDataToCsv = async (req,res)=>{
+static exportUserDataToCsv = async (req,res)=>{
 
    try {
     const users = await UserModel.getAllUsers()
@@ -248,7 +251,7 @@ const exportUserDataToCsv = async (req,res)=>{
 }
 
 
-const exportUserDataToCsvByid = async (req,res)=>{
+static exportUserDataToCsvByid = async (req,res)=>{
    const {id}= req.params
     try {
      const users = await UserModel.getUserById(id)
@@ -272,7 +275,7 @@ const exportUserDataToCsvByid = async (req,res)=>{
  }
 
 
- const exportUserDataToJson= async (req,res)=>{
+ static exportUserDataToJson= async (req,res)=>{
     try {
         
         const users= await UserModel.getAllUsers()
@@ -291,7 +294,7 @@ const exportUserDataToCsvByid = async (req,res)=>{
  }
 
 
- const exportComprasUserData = async (req, res) => {
+ static exportComprasUserData = async (req, res) => {
     const {id}= req.params
     try {
         const purchases = await comprasModel.getComprasByUserId(id);
@@ -360,7 +363,7 @@ const exportUserDataToCsvByid = async (req,res)=>{
 };
 
 
-const exportComprasData = async (req, res) => {
+static exportComprasData = async (req, res) => {
     
     try {
         const purchases = await comprasModel.getComprasDetails();
@@ -430,18 +433,762 @@ const exportComprasData = async (req, res) => {
 };
 
 
+static exportComprasDataByName= async (req,res)=>{
+    const {nombre} = req.query
 
-export default {
-    exportUsersData,
-    exportUserData,
-    exportUsersDataByName,
-     exportUserDataPdf,
-     exportUserDataByIdPdf,
-     exportUserDataToCsv,
-     exportUserDataToCsvByid,
-     exportUserDataToJson,
-     exportComprasUserData,
-     exportComprasData
+    try {
+        const comprasByUser= await comprasModel.getComprasByUsername(nombre)
+        if (!comprasByUser || comprasByUser.length === 0) {
+            throw new Error('No users found');
+        }
+
+
+
+     // Agrupar las compras
+     const groupedPurchases = {};
+
+     comprasByUser.forEach(row => {
+         if (!groupedPurchases[row.id_compra]) {
+             // Si aún no existe la compra, la crea
+             groupedPurchases[row.id_compra] = {
+                 id_compra: row.id_compra,
+                 fecha: row.fecha,
+                 total:row.total_compra,
+                 nombre: row.nombre,
+                 apellido: row.apellido,
+                 cedula: row.cedula,
+                 correo: row.correo,
+                 productos: [] // Inicializa el array de productos
+             };
+         }
+
+         // Agregar el producto a la lista de productos
+         groupedPurchases[row.id_compra].productos.push({
+             id_producto: row.id_producto,
+             nombre_producto: row.nombre_producto,
+             cantidad: row.cantidad,
+             precio: row.precio
+         });
+     });
+
+
+
+     // Convertir el objeto agrupado en un array
+     const finalPurchases = Object.values(groupedPurchases).map(purchase => ({
+        ...purchase,
+        productos: purchase.productos.map(product => `ID: ${product.id_producto},nombre:${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`).join('; ')
+    }));
+
+
+
+
+
+          // Create a new workbook
+          const wb = XLSX.utils.book_new();
+
+          // Create a worksheet from user data
+          const ws = XLSX.utils.json_to_sheet(finalPurchases, {
+            header: ['id_compra', 'fecha', 'nombre', 'apellido', 'cedula', 'correo', 'productos']
+          });
+
+          // Append the worksheet to the workbook
+          XLSX.utils.book_append_sheet(wb, ws, 'Usuario Compras');
+
+          // Convert workbook to buffer
+          const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+          
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+
+
+          return excelBuffer;
+        
+    } catch (error) {
+        console.error('Error al exportar los datos del usuario a Excel:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 }
 
+
+static exportComprasByDate= async (req,res)=>{
+const {startDate,endDate}= req.query;
+console.log(startDate,endDate)
+if(!startDate ||  !endDate){
+  return res.status(400).json({error:'Se requieren start'})  
+}
+
+//Formateamos la fecha
+const formattedStartDate = new Date(startDate)
+const formattedEndDate= new Date(endDate);
+
+if(isNaN(formattedStartDate) || isNaN(formattedEndDate)){
+    return res.status(400).json({error:'Fechas invalidas'})
+}
+
+try {
+
+    const compras= await comprasModel.findByDateRange(formattedStartDate,formattedEndDate)
+
+
+
+ 
+
+    
+     // Agrupar las compras
+     const groupedPurchases = {};
+
+     compras.forEach(row => {
+         if (!groupedPurchases[row.id_compra]) {
+             // Si aún no existe la compra, la crea
+             groupedPurchases[row.id_compra] = {
+                 id_compra: row.id_compra,
+                 fecha: row.fecha,
+                 total:row.total_compra,
+                 nombre: row.nombre,
+                 apellido: row.apellido,
+                 cedula: row.cedula,
+                 correo: row.correo,
+                 productos: [] // Inicializa el array de productos
+             };
+         }
+
+         // Agregar el producto a la lista de productos
+         groupedPurchases[row.id_compra].productos.push({
+             id_producto: row.id_producto,
+             nombre_producto: row.nombre_producto,
+             cantidad: row.cantidad,
+             precio: row.precio
+         });
+     });
+
+
+
+     // Convertir el objeto agrupado en un array
+     const finalPurchases = Object.values(groupedPurchases).map(purchase => ({
+        ...purchase,
+        productos: purchase.productos.map(product => `ID: ${product.id_producto},nombre:${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`).join('; ')
+    }));
+
+
+
+
+          // Create a new workbook
+          const wb = XLSX.utils.book_new();
+
+          // Create a worksheet from user data
+          const ws = XLSX.utils.json_to_sheet(finalPurchases, {
+            header: ['id_compra', 'fecha', 'nombre', 'apellido', 'cedula', 'correo', 'productos']
+          });
+
+          // Append the worksheet to the workbook
+          XLSX.utils.book_append_sheet(wb, ws, 'Usuario Compras');
+
+          // Convert workbook to buffer
+          const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+          
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+
+
+          return excelBuffer;
+
+} catch (error) {
+    console.error('Error al exportar los datos del usuario a Excel:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+}
+
+}
+
+
+static exportComprasUserDate = async (req,res)=>{
+    const {id}= req.params  
+    const {startDate,endDate}= req.query;
+console.log(startDate,endDate)
+if(!startDate ||  !endDate){
+  return res.status(400).json({error:'Se requieren start'})  
+}
+
+//Formateamos la fecha
+const formattedStartDate = new Date(startDate)
+const formattedEndDate= new Date(endDate);
+
+if(isNaN(formattedStartDate) || isNaN(formattedEndDate)){
+    return res.status(400).json({error:'Fechas invalidas'})
+}
+
+try {
+
+    const compras= await  comprasModel.findByDateRangeUserId(id,formattedStartDate, formattedEndDate);
+
+
+
+ 
+
+    
+     // Agrupar las compras
+     const groupedPurchases = {};
+
+     compras.forEach(row => {
+         if (!groupedPurchases[row.id_compra]) {
+             // Si aún no existe la compra, la crea
+             groupedPurchases[row.id_compra] = {
+                 id_compra: row.id_compra,
+                 fecha: row.fecha,
+                 total:row.total_compra,
+                 nombre: row.nombre,
+                 apellido: row.apellido,
+                 cedula: row.cedula,
+                 correo: row.correo,
+                 productos: [] // Inicializa el array de productos
+             };
+         }
+
+         // Agregar el producto a la lista de productos
+         groupedPurchases[row.id_compra].productos.push({
+             id_producto: row.id_producto,
+             nombre_producto: row.nombre_producto,
+             cantidad: row.cantidad,
+             precio: row.precio
+         });
+     });
+
+
+
+     // Convertir el objeto agrupado en un array
+     const finalPurchases = Object.values(groupedPurchases).map(purchase => ({
+        ...purchase,
+        productos: purchase.productos.map(product => `ID: ${product.id_producto},nombre:${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`).join('; ')
+    }));
+
+
+
+
+          // Create a new workbook
+          const wb = XLSX.utils.book_new();
+
+          // Create a worksheet from user data
+          const ws = XLSX.utils.json_to_sheet(finalPurchases, {
+            header: ['id_compra', 'fecha', 'nombre', 'apellido', 'cedula', 'correo', 'productos']
+          });
+
+          // Append the worksheet to the workbook
+          XLSX.utils.book_append_sheet(wb, ws, 'Usuario Compras');
+
+          // Convert workbook to buffer
+          const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+          
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(excelBuffer);
+
+
+          return excelBuffer;
+
+} catch (error) {
+    console.error('Error al exportar los datos del usuario a Excel:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+}
+}
+
+/*
+const exportComprasDataPdf = async (req, res) => {
+    try {
+        const purchases = await comprasModel.getComprasDetails();
+
+        if (!purchases || purchases.length === 0) {
+            throw new Error('No purchases found');
+        }
+
+        // Agrupar las compras
+        const groupedPurchases = {};
+
+        purchases.forEach(row => {
+            if (!groupedPurchases[row.id_compra]) {
+                groupedPurchases[row.id_compra] = {
+                    id_compra: row.id_compra,
+                    fecha: row.fecha,
+                    total: row.total_compra,
+                    nombre: row.nombre,
+                    apellido: row.apellido,
+                    cedula: row.cedula,
+                    correo: row.correo,
+                    productos: []
+                };
+            }
+            groupedPurchases[row.id_compra].productos.push({
+                id_producto: row.id_producto,
+                nombre_producto: row.nombre_producto,
+                cantidad: row.cantidad,
+                precio: row.precio
+            });
+        });
+
+        const finalPurchases = Object.values(groupedPurchases);
+
+        const doc = new PDFDocument();
+        const stream = Readable.from(doc);
+
+        // Configura las cabeceras para la descarga del PDF
+        res.setHeader('Content-Disposition', 'attachment; filename="compras_data.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+
+        // Título del documento
+        doc.fontSize(18).text('Datos de Compras', { align: 'center' });
+        doc.moveDown();
+
+        const tableTop = 100;
+        const itemHeight = 20;
+        let y = tableTop;
+
+        // Dibuja las cabeceras de la tabla
+        doc.fontSize(12)
+            .text('ID Compra', 50, y)
+            .text('Nombre', 150, y)
+            .text('Apellido', 300, y)
+            .text('Total', 400, y);
+
+        // Línea horizontal
+        doc.moveTo(50, y + itemHeight).lineTo(550, y + itemHeight).stroke();
+        y += itemHeight;
+
+        // Añadir datos de compras
+        finalPurchases.forEach(purchase => {
+            doc.text(purchase.id_compra, 50, y);
+            doc.text(purchase.nombre, 150, y);
+            doc.text(purchase.apellido, 300, y);
+            doc.text(purchase.total.toString(), 400, y);
+
+            // Línea horizontal después de cada fila
+            doc.moveTo(50, y + itemHeight).lineTo(550, y + itemHeight).stroke();
+            y += itemHeight;
+
+            // Añadir productos
+            purchase.productos.forEach(product => {
+                doc.text(`ID: ${product.id_producto}, Nombre: ${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`, 50, y);
+                y += itemHeight;
+            });
+
+            // Línea horizontal
+        doc.moveTo(50, y + itemHeight).lineTo(550, y + itemHeight).stroke();
+        y += itemHeight;
+
+        });
+
+        // Finaliza el PDF y envíalo como respuesta
+        doc.end();
+        stream.pipe(res);
+
+    } catch (error) {
+        console.error('Error al exportar los datos de las compras a PDF:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+*/
+
+static exportComprasDataPdf = async (req, res) => {
+    try {
+        const purchases = await comprasModel.getComprasDetails();
+
+        if (!purchases || purchases.length === 0) {
+            throw new Error('No purchases found');
+        }
+
+        // Agrupar las compras
+        const groupedPurchases = {};
+        purchases.forEach(row => {
+            if (!groupedPurchases[row.id_compra]) {
+                groupedPurchases[row.id_compra] = {
+                    id_compra: row.id_compra,
+                    fecha: row.fecha,
+                    total: row.total_compra,
+                    nombre: row.nombre,
+                    apellido: row.apellido,
+                    cedula: row.cedula,
+                    correo: row.correo,
+                    productos: []
+                };
+            }
+            groupedPurchases[row.id_compra].productos.push({
+                id_producto: row.id_producto,
+                nombre_producto: row.nombre_producto,
+                cantidad: row.cantidad,
+                precio: row.precio
+            });
+        });
+
+        const finalPurchases = Object.values(groupedPurchases);
+
+        const doc = new PDFDocument();
+        const stream = Readable.from(doc);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="compras_data.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+
+        doc.fontSize(18).text('Datos de Compras', { align: 'center' });
+        doc.moveDown(2);
+
+        const tableTop = doc.y;
+        const itemHeight = 20;
+        const tableWidth = 500;
+
+        // Cabeceras de la tabla
+        doc.fontSize(12).fillColor('black').text('ID Compra', 50, tableTop);
+        doc.text('Nombre', 150, tableTop);
+        doc.text('Apellido', 300, tableTop);
+        doc.text('Total', 400, tableTop);
+        doc.text('Fecha', 500, tableTop);
+        
+        // Línea horizontal
+        doc.moveTo(50, tableTop + itemHeight).lineTo(550, tableTop + itemHeight).stroke();
+
+        let y = tableTop + itemHeight;
+
+        finalPurchases.forEach(purchase => {
+            doc.fontSize(10).fillColor('black')
+                .text(purchase.id_compra, 50, y)
+                .text(purchase.nombre, 150, y)
+                .text(purchase.apellido, 300, y)
+                .text(purchase.total.toString(), 400, y)// Formatear total
+                .text(purchase.fecha, 500, y); 
+
+            y += itemHeight;
+
+            // Línea horizontal después de cada fila
+            doc.moveTo(50, y).lineTo(550, y).stroke();
+            y += itemHeight;
+
+            // Productos de cada compra
+            purchase.productos.forEach(product => {
+                doc.text(`ID: ${product.id_producto}, Nombre: ${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`, 50, y);
+                y += itemHeight;
+            });
+
+            // Espaciado entre compras
+            y += itemHeight;
+
+             // Línea final
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+        });
+
+        // Línea final
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+
+        doc.end();
+        stream.pipe(res);
+
+    } catch (error) {
+        console.error('Error al exportar los datos de las compras a PDF:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
+
+
+
+static exportComprasDataByNamePdf= async (req,res)=>{
+    const {nombre} = req.query
+    try {
+        const purchases = await comprasModel.getComprasByUsername(nombre);
+
+        if (!purchases || purchases.length === 0) {
+            throw new Error('No purchases found');
+        }
+
+        // Agrupar las compras
+        const groupedPurchases = {};
+        purchases.forEach(row => {
+            if (!groupedPurchases[row.id_compra]) {
+                groupedPurchases[row.id_compra] = {
+                    id_compra: row.id_compra,
+                    fecha: row.fecha,
+                    total: row.total_compra,
+                    nombre: row.nombre,
+                    apellido: row.apellido,
+                    cedula: row.cedula,
+                    correo: row.correo,
+                    productos: []
+                };
+            }
+            groupedPurchases[row.id_compra].productos.push({
+                id_producto: row.id_producto,
+                nombre_producto: row.nombre_producto,
+                cantidad: row.cantidad,
+                precio: row.precio
+            });
+        });
+
+        const finalPurchases = Object.values(groupedPurchases);
+
+        const doc = new PDFDocument();
+        const stream = Readable.from(doc);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="compras_data.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+
+        doc.fontSize(18).text('Datos de Compras', { align: 'center' });
+        doc.moveDown(2);
+
+        const tableTop = doc.y;
+        const itemHeight = 20;
+        const tableWidth = 500;
+
+        // Cabeceras de la tabla
+        doc.fontSize(12).fillColor('black').text('ID Compra', 50, tableTop);
+        doc.text('Nombre', 150, tableTop);
+        doc.text('Apellido', 300, tableTop);
+        doc.text('Total', 400, tableTop);
+        doc.text('Fecha',500,tableTop)
+        
+        // Línea horizontal
+        doc.moveTo(50, tableTop + itemHeight).lineTo(550, tableTop + itemHeight).stroke();
+
+        let y = tableTop + itemHeight;
+
+        finalPurchases.forEach(purchase => {
+            doc.fontSize(10).fillColor('black')
+                .text(purchase.id_compra, 50, y)
+                .text(purchase.nombre, 150, y)
+                .text(purchase.apellido, 300, y)
+                .text(purchase.total.toString(), 400, y) // Formatear total
+                .text(purchase.fecha,500,y)
+
+            y += itemHeight;
+
+            // Línea horizontal después de cada fila
+            doc.moveTo(50, y).lineTo(550, y).stroke();
+            y += itemHeight;
+
+            // Productos de cada compra
+            purchase.productos.forEach(product => {
+                doc.text(`ID: ${product.id_producto}, Nombre: ${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`, 50, y);
+                y += itemHeight;
+            });
+
+            // Espaciado entre compras
+            y += itemHeight;
+
+             // Línea final
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+        });
+
+        // Línea final
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+
+        doc.end();
+        stream.pipe(res);
+
+    } catch (error) {
+        console.error('Error al exportar los datos de las compras a PDF:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}
+
+
+
+static exportComprasByDatePdf = async (req,res)=>{
+    const {startDate,endDate} = req.query
+    try {
+        const purchases = await comprasModel.findByDateRange(startDate,endDate);
+
+        if (!purchases || purchases.length === 0) {
+            throw new Error('No purchases found');
+        }
+
+        // Agrupar las compras
+        const groupedPurchases = {};
+        purchases.forEach(row => {
+            if (!groupedPurchases[row.id_compra]) {
+                groupedPurchases[row.id_compra] = {
+                    id_compra: row.id_compra,
+                    fecha: row.fecha,
+                    total: row.total_compra,
+                    nombre: row.nombre,
+                    apellido: row.apellido,
+                    cedula: row.cedula,
+                    correo: row.correo,
+                    productos: []
+                };
+            }
+            groupedPurchases[row.id_compra].productos.push({
+                id_producto: row.id_producto,
+                nombre_producto: row.nombre_producto,
+                cantidad: row.cantidad,
+                precio: row.precio
+            });
+        });
+
+        const finalPurchases = Object.values(groupedPurchases);
+
+        const doc = new PDFDocument();
+        const stream = Readable.from(doc);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="compras_data.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+
+        doc.fontSize(18).text('Datos de Compras', { align: 'center' });
+        doc.moveDown(2);
+
+        const tableTop = doc.y;
+        const itemHeight = 20;
+        const tableWidth = 500;
+
+        // Cabeceras de la tabla
+        doc.fontSize(12).fillColor('black').text('ID Compra', 50, tableTop);
+        doc.text('Nombre', 150, tableTop);
+        doc.text('Apellido', 300, tableTop);
+        doc.text('Total', 400, tableTop);
+        doc.text('Fecha', 500, tableTop);
+        
+        // Línea horizontal
+        doc.moveTo(50, tableTop + itemHeight).lineTo(550, tableTop + itemHeight).stroke();
+
+        let y = tableTop + itemHeight;
+
+        finalPurchases.forEach(purchase => {
+            doc.fontSize(10).fillColor('black')
+                .text(purchase.id_compra, 50, y)
+                .text(purchase.nombre, 150, y)
+                .text(purchase.apellido, 300, y)
+                .text(purchase.total.toString(), 400, y)// Formatear total
+                .text(purchase.fecha, 500, y); 
+
+            y += itemHeight;
+
+            // Línea horizontal después de cada fila
+            doc.moveTo(50, y).lineTo(550, y).stroke();
+            y += itemHeight;
+
+            // Productos de cada compra
+            purchase.productos.forEach(product => {
+                doc.text(`ID: ${product.id_producto}, Nombre: ${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`, 50, y);
+                y += itemHeight;
+            });
+
+            // Espaciado entre compras
+            y += itemHeight;
+
+             // Línea final
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+        });
+
+        // Línea final
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+
+        doc.end();
+        stream.pipe(res);
+
+    } catch (error) {
+        console.error('Error al exportar los datos de las compras a PDF:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}
+
+static exportComprasUserDatePdf= async (req,res)=>{
+    const {id}= req.params
+    const {startDate,endDate} = req.query
+    try {
+        const purchases = await comprasModel.findByDateRangeUserId(id,startDate,endDate);
+
+        if (!purchases || purchases.length === 0) {
+            throw new Error('No purchases found');
+        }
+
+        // Agrupar las compras
+        const groupedPurchases = {};
+        purchases.forEach(row => {
+            if (!groupedPurchases[row.id_compra]) {
+                groupedPurchases[row.id_compra] = {
+                    id_compra: row.id_compra,
+                    fecha: row.fecha,
+                    total: row.total_compra,
+                    nombre: row.nombre,
+                    apellido: row.apellido,
+                    cedula: row.cedula,
+                    correo: row.correo,
+                    productos: []
+                };
+            }
+            groupedPurchases[row.id_compra].productos.push({
+                id_producto: row.id_producto,
+                nombre_producto: row.nombre_producto,
+                cantidad: row.cantidad,
+                precio: row.precio
+            });
+        });
+
+        const finalPurchases = Object.values(groupedPurchases);
+
+        const doc = new PDFDocument();
+        const stream = Readable.from(doc);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="compras_data.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+
+        doc.fontSize(18).text('Datos de Compras', { align: 'center' });
+        doc.moveDown(2);
+
+        const tableTop = doc.y;
+        const itemHeight = 20;
+        const tableWidth = 500;
+
+        // Cabeceras de la tabla
+        doc.fontSize(12).fillColor('black').text('ID Compra', 50, tableTop);
+        doc.text('Nombre', 150, tableTop);
+        doc.text('Apellido', 300, tableTop);
+        doc.text('Total', 400, tableTop);
+        doc.text('Fecha', 500, tableTop);
+        
+        // Línea horizontal
+        doc.moveTo(50, tableTop + itemHeight).lineTo(550, tableTop + itemHeight).stroke();
+
+        let y = tableTop + itemHeight;
+
+        finalPurchases.forEach(purchase => {
+            doc.fontSize(10).fillColor('black')
+                .text(purchase.id_compra, 50, y)
+                .text(purchase.nombre, 150, y)
+                .text(purchase.apellido, 300, y)
+                .text(purchase.total.toString(), 400, y)// Formatear total
+                .text(purchase.fecha, 500, y); 
+
+            y += itemHeight;
+
+            // Línea horizontal después de cada fila
+            doc.moveTo(50, y).lineTo(550, y).stroke();
+            y += itemHeight;
+
+            // Productos de cada compra
+            purchase.productos.forEach(product => {
+                doc.text(`ID: ${product.id_producto}, Nombre: ${product.nombre_producto}, Cantidad: ${product.cantidad}, Precio: ${product.precio}`, 50, y);
+                y += itemHeight;
+            });
+
+            // Espaciado entre compras
+            y += itemHeight;
+
+             // Línea final
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+        });
+
+        // Línea final
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+
+        doc.end();
+        stream.pipe(res);
+
+    } catch (error) {
+        console.error('Error al exportar los datos de las compras a PDF:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+}
+
+}
+
+export default exportControllers
 

@@ -1,8 +1,10 @@
 import notificacionModel from '../models/notificationsModel.js';
 import notificationService from '../services/notificationService.js';
 
-// Ruta para crear una notificación
-const createNotification = async (req, res) => {
+class notificationsController{
+
+
+static createNotification = async (req, res) => {
     const { message, type } = req.body;
 
     try {
@@ -15,7 +17,7 @@ const createNotification = async (req, res) => {
 };
 
 
-const updateNotification = async (req,res)=>{
+static updateNotification = async (req,res)=>{
  const {id}= req.params
  const updateFields= req.body;
 
@@ -30,7 +32,7 @@ const updateNotification = async (req,res)=>{
 }
 
 //Ruta para crear una notificacion para un usuario
-const createUserNotification= async (req,res)=>{
+static createUserNotification= async (req,res)=>{
 const { id_notificacion,id_usuario}= req.body
 
   try {
@@ -44,7 +46,7 @@ const { id_notificacion,id_usuario}= req.body
 }
 
 // Ruta para obtener notificaciones para un usuario
-const getNotifications = async (req, res) => {
+static getNotifications = async (req, res) => {
     
 
     try {
@@ -56,7 +58,7 @@ const getNotifications = async (req, res) => {
     }
 };
 
-const deleteNotification = async (req,res)=>{
+static deleteNotification = async (req,res)=>{
     const { id }= req.params;
     console.log(id)
     
@@ -74,7 +76,7 @@ const deleteNotification = async (req,res)=>{
 }
 
 
-const getUserNotification = async (req,res)=>{
+static getUserNotification = async (req,res)=>{
     const { username } = req.query;
 try {
     const userNotification= await notificationService.getUserNotification(username);
@@ -93,7 +95,7 @@ try {
 
 
 
-const updateUserNotification = async (req,res)=>{
+static updateUserNotification = async (req,res)=>{
     const {id}= req.params
     const updateFields= req.body;
    
@@ -108,7 +110,7 @@ const updateUserNotification = async (req,res)=>{
    }
 
 
-const deleteUserNotification= async (req,res)=>{
+static deleteUserNotification= async (req,res)=>{
     const {id} =req.params
 
     try {
@@ -125,6 +127,6 @@ const deleteUserNotification= async (req,res)=>{
     }
 }
 
+}
 
-
-export default { getNotifications,createNotification,updateNotification,deleteNotification,getUserNotification,createUserNotification,updateUserNotification,deleteUserNotification};
+export default notificationsController
