@@ -1,57 +1,59 @@
 import { pool } from '../db/db1.js'; // Asegúrate de que 'pool' es una instancia de conexión que soporte promesas
 import comprasModel from '../models/comprasModel.js';
 import ProductModel from '../models/productModel.js';
-import httpHelpers from '../helpers/httpHelper.js';
 import UserModel from '../models/userModels.js';
+//import comprasModel from '../models/firebase/comprasModel_firebase.js';
 
+class comprasController{
 
-
- const getCompras= async (req,res) =>{
- 
+static getCompras = async (req, res) => {
   try {
-    
     const result = await comprasModel.getComprasDetails();
+console.log(result)
+    const compraAgrupada = result.reduce((acc, row) => {
+      const { id_compra, fecha, total_compra, id_usuario, nombre, apellido, cedula, correo, id_producto, nombre_producto, cantidad, precio } = row;
 
-    // Procesar los resultados
-    const compraAgrupada = {};
-
-    result.forEach(row => {
-      if (!compraAgrupada[row.id_compra]) {
-        compraAgrupada[row.id_compra] = {
-          id_compra: row.id_compra,
-          fecha: row.fecha,
-          total:row.total_compra,
+      if (!acc[id_compra]) {
+        acc[id_compra] = {
+          id_compra,
+          fecha,
+          total: total_compra,
           usuario: {
-            id: row.id_usuario,
-            nombre: row.nombre,
-            apellido: row.apellido,
-            cedula: row.cedula,
-            correo: row.correo,
+            id: id_usuario,
+            nombre,
+            apellido,
+            cedula,
+            correo,
           },
-          productos: []
+          productos: [],
         };
       }
 
-      // Agregar el producto a la compra
-      compraAgrupada[row.id_compra].productos.push({
-        id_producto: row.id_producto,
-        nombre:row.nombre_producto,
-        cantidad: row.cantidad,
-        precio: row.precio
+      acc[id_compra].productos.push({
+        id_producto,
+        nombre: nombre_producto,
+        cantidad,
+        precio,
       });
-    });
+
+      return acc;
+    }, {});
 
     return res.json(Object.values(compraAgrupada));
   } catch (error) {
-    console.error('Error ejecutando la consulta',error)
- res.status(500).json({error:'Error interno del servidor'});
-  // httpHelpers.errorResponse(res, 'Error interno del servidor'); // Usar el helper
- 
+    console.error('Error ejecutando la consulta', error);
+    return res.status(500).json({
+      error: 'Error interno del servidor',
+      details: error.message, // Incluye detalles del error si es seguro hacerlo
+    });
   }
+};
+ 
 
- }
 
- const getCompraById= async (req,res) =>{
+
+
+ static getCompraById= async (req,res) =>{
  const {id}= req.params;
 
  try {
@@ -74,57 +76,9 @@ res.json(result);
  }
  }
 
-/*
-  const compraProduct= async (req,res)=>{
-
-  const {id_producto,cantidad,id_usuario} =req.body
-
-   if (!id_producto || !cantidad || !id_usuario) {
-    return res.status(400).json({ error: 'Todos los campos son requeridos' });
-   }
-
-   const cantidadNum = parseInt(cantidad, 10);
-
-   if (isNaN(cantidadNum) || cantidadNum <= 0) {
-    return res.status(400).json({ error: 'La cantidad debe ser un número entero positivo' });
-   }
-
-  // Iniciar transacción
-   const connection = await pool.getConnection();
-   await connection.beginTransaction();
-
-   try { 
-    
-    const stock = await ProductModel.getProductStock(connection, id_producto);
-
-    if(stock< cantidadNum){
-        await connection.rollback(); // Deshacer la transacción
-        return res.status(400).json({ error: 'Stock insuficiente' });
-    }
-
-    const addCompra = comprasModel.addCompra(connection,id_producto,cantidadNum,id_usuario)
-
-    const newStock =stock - cantidadNum;
-    await ProductModel.updateProductStock(connection,id_producto,newStock);
-
-    await connection.commit();
-
-    res.status(201).json({ id_compra: addCompra.insertId, message: 'Compra realizada con éxito' });
 
 
-  } catch (err) {
-    console.error('Error ejecutando la transacción:', err);
-    await connection.rollback(); // Deshacer la transacción en caso de error
-    res.status(500).json({ error: 'Error interno del servidor' });    
-  }
-
-
-  
-}
-  */
-
-
-const compraProduct = async (req, res) => {
+ static compraProduct = async (req, res) => {
   const { id_usuario, productos } = req.body;
 
   if (!id_usuario || !productos || !Array.isArray(productos) || productos.length === 0) {
@@ -192,7 +146,7 @@ const compraProduct = async (req, res) => {
   }
 };
 
-const deleteCompra = async (req,res) => {
+ static deleteCompra = async (req,res) => {
  const { id } = req.params;
 
  try {
@@ -212,7 +166,7 @@ const deleteCompra = async (req,res) => {
  }
 }
 
-const getComprasByDate = async (req, res) => {
+ static getComprasByDate = async (req, res) => {
   const { startDate, endDate } = req.query; // Obtener fechas desde los parámetros de consulta
  console.log(startDate,endDate)
   // Validar las fechas
@@ -234,34 +188,35 @@ const getComprasByDate = async (req, res) => {
 
 
 
-    // Procesar los resultados
-    const compraAgrupada = {};
+     // Procesar los resultados usando reduce
+     const compraAgrupada = compras.reduce((acc, row) => {
+      const { id_compra, fecha, total_compra, id_usuario, nombre, apellido, cedula, correo, id_producto, cantidad, precio } = row;
 
-    compras.forEach(row => {
-      if (!compraAgrupada[row.id_compra]) {
-        compraAgrupada[row.id_compra] = {
-          id_compra: row.id_compra,
-          fecha: row.fecha,
-          total:row.total_compra,
+      if (!acc[id_compra]) {
+        acc[id_compra] = {
+          id_compra,
+          fecha,
+          total: total_compra,
           usuario: {
-            id: row.id_usuario,
-            nombre: row.nombre,
-            apellido: row.apellido,
-            cedula: row.cedula,
-            correo: row.correo,
+            id: id_usuario,
+            nombre,
+            apellido,
+            cedula,
+            correo,
           },
-          productos: []
+          productos: [],
         };
       }
 
       // Agregar el producto a la compra
-      compraAgrupada[row.id_compra].productos.push({
-        id_producto: row.id_producto,
-        cantidad: row.cantidad,
-        precio: row.precio
+      acc[id_compra].productos.push({
+        id_producto,
+        cantidad,
+        precio,
       });
-    });
 
+      return acc;
+    }, {});
 
     return res.json(Object.values(compraAgrupada));
 
@@ -273,7 +228,7 @@ const getComprasByDate = async (req, res) => {
 };
 
 
-const getComprasByUserId = async (req, res) => {
+ static getComprasByUserId = async (req, res) => {
   const { userId } = req.params;
   console.log(userId);
 
@@ -324,7 +279,7 @@ const getComprasByUserId = async (req, res) => {
 };
 
 
-const getComprasByusername= async (req,res)=>{
+ static getComprasByusername= async (req,res)=>{
 
       const {nombre}=req.query
 
@@ -384,7 +339,7 @@ const getComprasByusername= async (req,res)=>{
   
 
       
-      const getComprasByUserDate=async (req,res)=>{
+      static  getComprasByUserDate=async (req,res)=>{
         const {id}= req.params;
         const { startDate, endDate } = req.query; // Obtener fechas desde los parámetros de consulta
         console.log(startDate,endDate)
@@ -445,6 +400,24 @@ const getComprasByusername= async (req,res)=>{
          }
       }
 
-      
 
-export default {getCompras,compraProduct,deleteCompra,getCompraById,getComprasByDate,getComprasByUserId,getComprasByusername,getComprasByUserDate};
+  static getComprasCountByUsuario= async  (req, res) => {
+
+    try{
+
+      const result= await comprasModel.getComprasCountByUsuario()
+      return  res.json(result)
+
+   
+    
+
+    }catch(error){
+      console.error('Error obteniendo el conteo de compras por usuario');
+      res.status(500).json({error:'Error interno del servidor'})
+    }
+  }
+
+
+    }
+
+export default comprasController;

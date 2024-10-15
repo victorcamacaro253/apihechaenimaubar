@@ -8,7 +8,13 @@ import redis from '../db/redis.js'
 import UserModel from '../models/firebase/userModel_firebase.js'
 import tokenService from '../services/tokenService.js';
 
-const getAllUser = async (req, res) => {
+
+
+
+class userController{
+
+
+static getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
     try {
 
@@ -32,7 +38,9 @@ const getAllUser = async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor 1' });
     }
 };
-const getUserById = async (req, res) => {
+
+
+static getUserById = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -77,7 +85,7 @@ const getUserById = async (req, res) => {
 
 
 // Agregar un nuevo usuario
-const addUser = async (req, res) => {
+static addUser = async (req, res) => {
     const { name, apellido, cedula, email, password } = req.body;
 
     if (!name || !apellido || !email || !password) {
@@ -117,7 +125,7 @@ const addUser = async (req, res) => {
 };
 
 
-const updateUser = async (req, res) => {
+static updateUser = async (req, res) => {
     const { id } = req.params;
     const { name, apellido, cedula, email, password } = req.body;
 
@@ -181,7 +189,7 @@ const updateUser = async (req, res) => {
 };
 
 // Eliminar un usuario por ID
-const deleteUser = async (req, res) => {
+static deleteUser = async (req, res) => {
     
     const { id } = req.params;
   
@@ -216,7 +224,7 @@ const deleteUser = async (req, res) => {
 
 
  // Actualizar parcialmente un usuario por ID
-const partialUpdateUser = async (req, res) => {
+static partialUpdateUser = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
@@ -272,7 +280,7 @@ const partialUpdateUser = async (req, res) => {
     }
 };
 
-const searchUsers = async (req, res) => {
+static searchUsers = async (req, res) => {
     const { name, apellido, cedula } = req.query; // Usa req.query para parámetros GET
 
     // Configurar encabezado CORS
@@ -313,7 +321,8 @@ const searchUsers = async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
-const loginUser = async (req, res) => {
+
+static loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     // Configurar encabezados CORS
@@ -374,7 +383,7 @@ const loginUser = async (req, res) => {
 
 
 
-const getPerfil = async (req, res) => {
+static getPerfil = async (req, res) => {
     try {
         // Verifica si `req.user` existe y tiene la propiedad `id`
         if (!req.user || !req.user.id) {
@@ -399,7 +408,7 @@ const getPerfil = async (req, res) => {
 };
 
 
-const getUserPerfil= async (req,res) => {
+static getUserPerfil= async (req,res) => {
     console.log('req.params:', req.params);
 const id = req.params.id;
     
@@ -432,7 +441,7 @@ const id = req.params.id;
 }
 
 
-const getLoginHistory = async (req,res)=>{
+static getLoginHistory = async (req,res)=>{
    // const {id} = req.params;
    const{ nombre } =req.query
     try {
@@ -458,7 +467,7 @@ const getLoginHistory = async (req,res)=>{
 }
 
 
-const getUsersWithPagination = async (req,res)=>{
+static getUsersWithPagination = async (req,res)=>{
     const {page= 1,limit=10}= req.query
     const offset= (page - 1 ) * limit;
     
@@ -477,7 +486,7 @@ const getUsersWithPagination = async (req,res)=>{
 
 
 
-const addMultipleUsers = async (req,res)=>{
+static addMultipleUsers = async (req,res)=>{
     const { users } = req.body
     const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null ;
   
@@ -557,7 +566,7 @@ const addMultipleUsers = async (req,res)=>{
   }
   
   
-const deleteMultipleUsers= async (req,res)=>{
+static deleteMultipleUsers= async (req,res)=>{
     const { users } = req.body
  
  
@@ -582,7 +591,7 @@ const deleteMultipleUsers= async (req,res)=>{
  
  }
  
- const requestPasswordRequest= async (req,res)=>{
+ static requestPasswordRequest= async (req,res)=>{
      const { email } = req.body;
 
      try{
@@ -619,7 +628,7 @@ const deleteMultipleUsers= async (req,res)=>{
 
 
 
- const resetPassword = async (req,res)=>{
+ static resetPassword = async (req,res)=>{
     const { token } = req.params;
     const { newPassword } = req.body;
 
@@ -642,6 +651,8 @@ const deleteMultipleUsers= async (req,res)=>{
     }
 
  }
+
+}
 
 /*
 const getcorreo = async (req, res) => {
@@ -711,21 +722,4 @@ const getcorreo = async (req, res) => {
 
 */
 
-export default {
-    getAllUser,
-    getUserById,
-    addUser,
-    updateUser,
-    deleteUser,
-    partialUpdateUser,
-    searchUsers,
-    loginUser,
-    getPerfil,
-    getUserPerfil,
-    getLoginHistory,
-    getUsersWithPagination,
-    addMultipleUsers,
-    deleteMultipleUsers,
-    requestPasswordRequest,
-    resetPassword
-};
+export default userController

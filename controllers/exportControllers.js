@@ -3,13 +3,15 @@ import PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
 import UserModel from '../models/userModels.js';
 import comprasModel from '../models/comprasModel.js';
+//import comprasModel from '../models/firebase/comprasModel_firebase.js'
 import XLSX from 'xlsx';
 import { Parser  } from 'json2csv';
-import { json } from 'express';
-import { Console } from 'console';
+//import UserModel from '../models/firebase/userModel_firebase.js';
 
 
-const exportUsersData = async (req,res)=>{
+class exportControllers{
+
+static exportUsersData = async (req,res)=>{
     
    try {
 
@@ -50,7 +52,7 @@ const exportUsersData = async (req,res)=>{
 }
 
 
-const exportUserData = async (req,res)=>{
+static exportUserData = async (req,res)=>{
     const { id }= req.params;
 
     try {
@@ -91,7 +93,7 @@ const exportUserData = async (req,res)=>{
 }
 
 
-const exportUsersDataByName= async (req,res)=>{
+static exportUsersDataByName= async (req,res)=>{
     const {nombre} = req.query
 
     try {
@@ -129,7 +131,7 @@ const exportUsersDataByName= async (req,res)=>{
 }
 
 
-const exportUserDataPdf = async(req,res)=>{
+static exportUserDataPdf = async(req,res)=>{
 
     try {
         // Simular la obtención de datos del usuario
@@ -186,7 +188,7 @@ const exportUserDataPdf = async(req,res)=>{
 }
 
 
-const exportUserDataByIdPdf = async (req,res)=>{
+static exportUserDataByIdPdf = async (req,res)=>{
     const {id}= req.params;
 
     try {
@@ -224,7 +226,7 @@ const exportUserDataByIdPdf = async (req,res)=>{
 }
 
 
-const exportUserDataToCsv = async (req,res)=>{
+static exportUserDataToCsv = async (req,res)=>{
 
    try {
     const users = await UserModel.getAllUsers()
@@ -248,7 +250,7 @@ const exportUserDataToCsv = async (req,res)=>{
 }
 
 
-const exportUserDataToCsvByid = async (req,res)=>{
+static exportUserDataToCsvByid = async (req,res)=>{
    const {id}= req.params
     try {
      const users = await UserModel.getUserById(id)
@@ -272,7 +274,7 @@ const exportUserDataToCsvByid = async (req,res)=>{
  }
 
 
- const exportUserDataToJson= async (req,res)=>{
+ static exportUserDataToJson= async (req,res)=>{
     try {
         
         const users= await UserModel.getAllUsers()
@@ -291,7 +293,7 @@ const exportUserDataToCsvByid = async (req,res)=>{
  }
 
 
- const exportComprasUserData = async (req, res) => {
+ static exportComprasUserData = async (req, res) => {
     const {id}= req.params
     try {
         const purchases = await comprasModel.getComprasByUserId(id);
@@ -360,7 +362,7 @@ const exportUserDataToCsvByid = async (req,res)=>{
 };
 
 
-const exportComprasData = async (req, res) => {
+static exportComprasData = async (req, res) => {
     
     try {
         const purchases = await comprasModel.getComprasDetails();
@@ -430,7 +432,7 @@ const exportComprasData = async (req, res) => {
 };
 
 
-const exportComprasDataByName= async (req,res)=>{
+static exportComprasDataByName= async (req,res)=>{
     const {nombre} = req.query
 
     try {
@@ -509,7 +511,7 @@ const exportComprasDataByName= async (req,res)=>{
 }
 
 
-const exportComprasByDate= async (req,res)=>{
+static exportComprasByDate= async (req,res)=>{
 const {startDate,endDate}= req.query;
 console.log(startDate,endDate)
 if(!startDate ||  !endDate){
@@ -602,7 +604,7 @@ try {
 
 
 
-const exportComprasUserDate = async (req,res)=>{
+static exportComprasUserDate = async (req,res)=>{
     const {id}= req.params  
     const {startDate,endDate}= req.query;
 console.log(startDate,endDate)
@@ -788,7 +790,7 @@ const exportComprasDataPdf = async (req, res) => {
 };
 */
 
-const exportComprasDataPdf = async (req, res) => {
+static exportComprasDataPdf = async (req, res) => {
     try {
         const purchases = await comprasModel.getComprasDetails();
 
@@ -889,7 +891,7 @@ const exportComprasDataPdf = async (req, res) => {
 
 
 
-const exportComprasDataByNamePdf= async (req,res)=>{
+static exportComprasDataByNamePdf= async (req,res)=>{
     const {nombre} = req.query
     try {
         const purchases = await comprasModel.getComprasByUsername(nombre);
@@ -988,8 +990,7 @@ const exportComprasDataByNamePdf= async (req,res)=>{
 }
 
 
-
-const exportComprasByDatePdf = async (req,res)=>{
+static exportComprasByDatePdf = async (req,res)=>{
     const {startDate,endDate} = req.query
     try {
         const purchases = await comprasModel.findByDateRange(startDate,endDate);
@@ -1087,7 +1088,7 @@ const exportComprasByDatePdf = async (req,res)=>{
     }
 }
 
-const exportComprasUserDatePdf= async (req,res)=>{
+static exportComprasUserDatePdf= async (req,res)=>{
     const {id}= req.params
     const {startDate,endDate} = req.query
     try {
@@ -1186,24 +1187,8 @@ const exportComprasUserDatePdf= async (req,res)=>{
     }
 }
 
-export default {
-    exportUsersData,
-    exportUserData,
-    exportUsersDataByName,
-     exportUserDataPdf,
-     exportUserDataByIdPdf,
-     exportUserDataToCsv,
-     exportUserDataToCsvByid,
-     exportUserDataToJson,
-     exportComprasUserData,
-     exportComprasData,
-     exportComprasDataByName,
-     exportComprasByDate,
-     exportComprasUserDate,
-     exportComprasDataPdf,
-     exportComprasDataByNamePdf,
-     exportComprasByDatePdf,
-     exportComprasUserDatePdf
 }
+
+export default exportControllers
 
 
