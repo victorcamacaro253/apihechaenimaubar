@@ -1,19 +1,16 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { readFileSync } from 'fs';
-import express, { json } from 'express';
+//import express, { json } from 'express';
 
-const serviceAccount = JSON.parse(readFileSync('victor-501be-firebase-adminsdk-chk59-10b962ab03.json', 'utf-8'));
-
-const app = express();
-app.use(json());
+const serviceAccount = JSON.parse(readFileSync('db/victor-501be-firebase-adminsdk-chk59-10b962ab03.json', 'utf-8'));
 
 initializeApp({
   credential: cert(serviceAccount),
 });
 
 const db = getFirestore();
-
+/*
 const getAllProducts = async () => {
   try {
     const productsSnapshot = await db.collection('productos').get();
@@ -92,8 +89,10 @@ getUserById(userId);
 getAllProducts();
 const PORT = process.env.PORT ?? 3006;
 
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+*/
 
 export default db;
