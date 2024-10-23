@@ -89,30 +89,34 @@
     event.preventDefault();
 
     const formData = new  FormData();
-
+    const products= [];
     const productElements = document.querySelectorAll('.product');
 
-    productElements.forEach(product => {
-        const productData = {
-            nombre_producto: product.querySelector('input[name="nombre_producto"]').value,
-            descripcion: product.querySelector('input[name="descripcion"]').value,
-            precio: product.querySelector('input[name="precio"]').value,
-            stock: product.querySelector('input[name="stock"]').value,
-            id_categoria: product.querySelector('input[name="id_categoria"]').value,
-            id_proveedor: product.querySelector('input[name="id_proveedor"]').value,
-            image: product.querySelector('input[name="image"]').files[0]
-        };
+    productElements.forEach((product,index) => {
+        
+           const nombre_producto= product.querySelector('input[name="nombre_producto"]').value
+           const descripcion= product.querySelector('input[name="descripcion"]').value
+           const precio = product.querySelector('input[name="precio"]').value
+            const stock = product.querySelector('input[name="stock"]').value
+           const id_categoria = product.querySelector('input[name="id_categoria"]').value
+            const id_proveedor = product.querySelector('input[name="id_proveedor"]').value
+            const image = product.querySelector('input[name="image"]').files[0]
+        
 
-        formData.append('products[]',JSON.stringify(productData))
+            if (nombre_producto && descripcion && precio && stock && id_categoria && id_proveedor ) {
+                    products.push({ nombre_producto, descripcion, precio, stock, id_categoria,id_proveedor });
+                    if (image) {
+                        formData.append(`image`, image);
+                    }
+                }
     });
+    formData.append('products', JSON.stringify(products));
+    
 
     try {
         const response = await fetch('http://localhost:3001/Products/addMultipleProducts', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ products }),
+            body: formData
         });
 
         const result = await response.json();
