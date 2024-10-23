@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agregar Múltiples Productos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .product,.user {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        h3 {
+            margin: 0 0 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Agregar Múltiples Productos</h1>
+    <form id="productForm">
+        <div id="productContainer">
+            <div class="product">
+                <h3>Producto 1</h3>
+                <input type="text" name="nombre_producto" placeholder="Nombre del producto" required>
+                <input type="text" name="descripcion" placeholder="Descripción" required>
+                <input type="number" name="precio" placeholder="Precio" required>
+                <input type="number" name="stock" placeholder="Stock" required>
+                <input type="text" name="id_categoria" placeholder="ID Categoría" required>
+                <input type="text" name="id_proveedor" placeholder="ID Proveedor">
+                <input type="file" name="image" accept="image/*" required>
+            </div>
+        </div>
+        <button type="button" id="addProductBtn">Agregar Otro Producto</button>
+        <button type="submit">Enviar Productos</button>
+    </form>
+
+    <h1>Agregar usuarios </h1>
+    <form id="userForm"  enctype="multipart/form-data">
+        <div id="userContainer">
+            <div class="users">
+                <h3>Usuario</h3>
+                <input type="text" name="name" placeholder="nombre">
+                <input type="text" name="apellido" placeholder="apellido">
+                <input type="text" name="cedula" placeholder="cedula">
+                <input type="email" name="email" placeholder="correo">
+                <input type="password" name="password" placeholder="Contraseña">
+                <input type="file" name="image" accept="image/*" required>
+
+
+            </div>
+            
+        </div>
+        <button type="button" id="addUserbtn">Agregar otro usuario</button>
+            <button type="submit">Enviar usuarios</button>
+    </form>
+
+    <script>
+        document.getElementById('addProductBtn').addEventListener('click', function() {
+            const productContainer = document.getElementById('productContainer');
+            const productCount = productContainer.children.length + 1;
+
+            const newProductDiv = document.createElement('div');
+            newProductDiv.classList.add('product');
+            newProductDiv.innerHTML = `
+                <h3>Producto ${productCount}</h3>
+                <input type="text" name="nombre_producto" placeholder="Nombre del producto" required>
+                <input type="text" name="descripcion" placeholder="Descripción" required>
+                <input type="number" name="precio" placeholder="Precio" required>
+                <input type="number" name="stock" placeholder="Stock" required>
+                <input type="text" name="id_categoria" placeholder="ID Categoría" required>
+                <input type="text" name="id_proveedor" placeholder="ID Proveedor">
+                <input type="file" name="image" accept="image/*" required>
+                   <button type="button"  id="deleteProductbtn${productCount}">Eliminar</button>
+            `;
+            productContainer.appendChild(newProductDiv);
+
+                 
+             // Agregar evento de eliminación al botón
+             newProductDiv.querySelector(`#deleteProductbtn${productCount}`).addEventListener('click', () => {
+                productContainer.removeChild(newProductDiv);
+            });
+        });
+
+        document.getElementById('productForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+
+    const formData = new  FormData();
+
+    const productElements = document.querySelectorAll('.product');
+
+    productElements.forEach(product => {
+        const productData = {
+            nombre_producto: product.querySelector('input[name="nombre_producto"]').value,
+            descripcion: product.querySelector('input[name="descripcion"]').value,
+            precio: product.querySelector('input[name="precio"]').value,
+            stock: product.querySelector('input[name="stock"]').value,
+            id_categoria: product.querySelector('input[name="id_categoria"]').value,
+            id_proveedor: product.querySelector('input[name="id_proveedor"]').value,
+            image: product.querySelector('input[name="image"]').files[0]
+        };
+
+        formData.append('products[]',JSON.stringify(productData))
+    });
+
+    try {
+        const response = await fetch('http://localhost:3001/Products/addMultipleProducts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ products }),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            alert('Productos agregados exitosamente!');
+            // Reiniciar el formulario si es necesario
+            document.getElementById('productForm').reset();
+            document.getElementById('productContainer').innerHTML = ''; // Limpiar productos
+        } else {
+            alert('Error al agregar productos: ' + JSON.stringify(result.errors || result));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al comunicar con el servidor');
+    }
+});
+
+
+document.getElementById('addUserbtn').addEventListener('click',()=>{
+    const userContainer = document.getElementById('userContainer');
+    const userCount = userContainer.children.length + 1 ; 
+    const newUserDiv = document.createElement('div');
+    newUserDiv.classList.add('users');
+    
+    newUserDiv.innerHTML=`
+        
+    <h3>${userCount}</h3>
+    <input type="text" name="name" placeholder="nombre">
+    <input type="text" name="apellido" placeholder="apellido">
+    <input type="text" name="cedula" placeholder="cedula">
+    <input type="email" name="email" placeholder="correo">
+    <input type="password" name="password" placeholder="Contraseña">
+     <input type="file" name="image" class="image" accept="image/*" required>
+      <button type="button" id="deleteUserbtn${userCount}">Eliminar</button>
+    
+    
+    
+      `;
+      userContainer.appendChild(newUserDiv)
+
+      newUserDiv.querySelector(`#deleteUserbtn${userCount}`).addEventListener('click', () => {
+                userContainer.removeChild(newUserDiv);
+            });
+})
+
+document.getElementById('userForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const formData = new FormData();
+        const users = [];
+        const userElements = document.querySelectorAll('.users');
+        
+     
+        userElements.forEach((userElem, index) => {
+                const name = userElem.querySelector('input[name="name"]').value;
+                const apellido = userElem.querySelector('input[name="apellido"]').value;
+                const cedula = userElem.querySelector('input[name="cedula"]').value;
+                const email = userElem.querySelector('input[name="email"]').value;
+                const password = userElem.querySelector('input[name="password"]').value;
+                const image = userElem.querySelector('input[name="image"]').files[0];
+
+                if (name && apellido && cedula && email && password) {
+                    users.push({ name, apellido, cedula, email, password });
+                    if (image) {
+                        formData.append(`image`, image);
+                    }
+                }
+            });
+
+            formData.append('users', JSON.stringify(users));
+   
+        
+
+        try {
+            const response = await fetch('http://localhost:3001/users/addMultipleUsers', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert('Usuarios agregados exitosamente!');
+                document.getElementById('userForm').reset();
+                document.getElementById('userContainer').innerHTML = ''; // Limpiar usuarios
+            } else {
+                alert('Error al agregar usuarios: ' + JSON.stringify(result.errors || result));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al comunicar con el servidor');
+        }
+    });
+
+
+
+    </script>
+</body>
+</html>
