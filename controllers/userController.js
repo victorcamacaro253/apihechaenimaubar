@@ -3,34 +3,17 @@ import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
 import pkg from 'jsonwebtoken';  // Importa el módulo completo
 const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
-//import UserModel from '../models/userModels.js'
-import redis from '../db/redis.js'
-import UserModel from '../models/firebase/userModel_firebase.js'
+import UserModel from '../models/userModels.js'
+import sendEmail from '../services/emailService.js';
 import tokenService from '../services/tokenService.js';
-
-
-
+import { error } from 'console';
 
 class userController{
-
 
 static getAllUser = async (req, res) => {
     res.header('Access-Control-Allow-Origin','*')
     try {
-
-    // Verificar si los datos están en la caché de Redis
-    const cachedUsers = await redis.get('allUsers');
-
-    if (cachedUsers) {
-        // Si los datos están en la caché, devolverlos
-        console.log('Datos obtenidos desde Redis');
-        return res.json(JSON.parse(cachedUsers));
-    }
-
         const results = await UserModel.getAllUsers();
-
-          // Almacenar los resultados en la caché de Redis con una expiración (por ejemplo, 10 minutos)
-          await redis.setEx('allUsers', 600, JSON.stringify(results)); // 600 segundos = 10 minutos
 
         res.json(results);
     } catch (err) {
@@ -39,21 +22,10 @@ static getAllUser = async (req, res) => {
     }
 };
 
-
 static getUserById = async (req, res) => {
     const { id } = req.params;
 
     try {
-            // Verificar si el usuario está en la caché de Redis
-             const cachedUser = await redis.get(`user:${id}`);
-             if (cachedUser) {
-                // Si el usuario está en la caché, parsear y obtener los datos
-                const user = JSON.parse(cachedUser);
-                console.log(`Datos obtenidos desde Redis: ID=${user.id}, Nombre=${user.nombre}`);
-                return res.json(user);
-            }
-    
-
         // Llama al método del modelo para obtener el usuario por ID
         const user = await UserModel.getUserById(id);
 
@@ -66,11 +38,6 @@ static getUserById = async (req, res) => {
             });
         }
 
-          // Almacenar el usuario en la caché de Redis con una expiración (por ejemplo, 5 minutos)
-          await redis.setEx(`user:${id}`, 300, JSON.stringify(user)); // 300 segundos = 5 minutos
-
-          console.log(`Datos obtenidos desde la base de datos: ID=${user.id}, Nombre=${user.nombre}`);
-
         // Envía el usuario encontrado como respuesta
         res.json(user);
     } catch (err) {
@@ -82,8 +49,6 @@ static getUserById = async (req, res) => {
         });
     }
 };
-
-
 // Agregar un nuevo usuario
 static addUser = async (req, res) => {
     const { name, apellido, cedula, email, password } = req.body;
@@ -96,31 +61,29 @@ static addUser = async (req, res) => {
         return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
     }
 
+   // const connection = await pool.getConnection(); // Obtener conexión desde el pool
     try {
-    
+     //   await connection.beginTransaction();
 
         const existingUser = await UserModel.existingCedula(cedula)
 
-        if (existingUser) {
-            
+        if (existingUser.length > 0) {
+           // await connection.rollback();
             return res.status(400).json({ error: 'Usuario ya existe' });
         }
 
         const hashedPassword = await hash(password, 10);
-        const result = await UserModel.addUser( name, apellido, cedula, email, hashedPassword);
+        const result = await UserModel.addUser(name, apellido, cedula, email,hashedPassword);
 
-        await connection.commit();
-
-        await redis.setEx(`user:${result.insertId}`, 300, JSON.stringify(result)); // 300 segundos = 5 minutos
-
-        
-        res.status(201).json({ id: result.insertId, name });
+        //await connection.commit();
+        res.status(201).json({ id: result.insertId, name, email });
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
         
+      //  await connection.rollback();
         res.status(500).json({ error: 'Error interno del servidor' });
     } finally {
-
+      //  connection.release(); // Liberar la conexión después de usarla
     }
 };
 
@@ -138,48 +101,40 @@ static updateUser = async (req, res) => {
         let values = [];
 
         if (name) {
-            updateFields.push('nombre');
+            updateFields.push('nombre = ?');
             values.push(name);
         }
 
         if (apellido) {
-            updateFields.push('apellido');
+            updateFields.push('apellido = ?');
             values.push(apellido);
         }
 
         if (cedula) {
-            updateFields.push('cedula');
+            updateFields.push('cedula = ?');
             values.push(cedula);
         }
 
         if (email) {
-            updateFields.push('correo');
+            updateFields.push('correo = ?');
             values.push(email);
         }
         
         if (password) {
             const hashedPassword = await hash(password, 10);
-            updateFields.push('contraseña');
+            updateFields.push('contraseña = ?');
             values.push(hashedPassword);
         }
 
         if (updateFields.length === 0) {
             return res.status(400).json({ error: 'No hay datos para actualizar' });
         }
-      console.log(updateFields)
+
         const results = await UserModel.updateUser(id, updateFields,values);
 
         if (results.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
-
-        // Invalidar la caché de Redis para este usuario
-        await redis.del(`user:${id}`);
-
-
-        // Opcionalmente, podrías volver a obtener el usuario actualizado y guardarlo nuevamente en Redis
-        const updatedUser = await UserModel.getUserById(id);
-        await redis.setEx(`user:${id}`, 300, JSON.stringify(updatedUser)); // 300 segundos = 5 minutos
 
         res.status(200).json({ message: 'Usuario actualizado exitosamente' });
     } catch (err) {
@@ -210,10 +165,6 @@ static deleteUser = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
-
-
-        // Invalida la caché de Redis para este usuario
-        await redis.del(`user:${id}`);
 
         res.status(200).json({ message: 'Usuario eliminado exitosamente' });
     } catch (err) {
@@ -293,26 +244,8 @@ static searchUsers = async (req, res) => {
     }
 
     try {
-         // Crear una clave única para la caché basada en los parámetros de búsqueda
-         const cacheKey = `searchUsers:${name || ''}:${apellido || ''}:${cedula || ''}`;
-
-         // Verificar si los resultados ya están en la caché de Redis
-         const cachedResults = await redis.get(cacheKey);
- 
-         if (cachedResults) {
-             // Si los datos están en la caché, devolverlos
-             console.log('Datos obtenidos desde Redis');
-             return res.status(200).json({ results: JSON.parse(cachedResults) });
-         }
- 
         // Llamar a la función del modelo
         const results = await UserModel.searchUsers({ name, apellido, cedula });
-
-        if(!results){
-            return res.status(404).json({ error: 'No se encontraron usuarios' });
-        }
-        // Almacenar los resultados en la caché de Redis con una expiración (por ejemplo, 10 minutos)
-        await redis.setEx(cacheKey, 600, JSON.stringify(results)); // 600 segundos = 10 minutos
 
         res.status(200).json({results});
         
@@ -485,175 +418,104 @@ static getUsersWithPagination = async (req,res)=>{
 
 
 
+static addMultipleUsers = async (req, res) => {
+    // Convierte users de string a objeto
+    let users;
+    try {
+        users = JSON.parse(req.body.users || '[]');
+    } catch (error) {
+        return res.status(400).json({ error: 'Invalid JSON format for users' });
+    }
 
-static addMultipleUsers = async (req,res)=>{
-    const { users } = req.body
-    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null ;
-  
-    console.log(users)
-  
-    if(!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.users)){
-      return res.status(400).json({error:'Users must be an array'})
-    }
-  
-    const errors= [];
-    const createdUsers = [];
-    
-     try {
-      
-    const usersToInsert = [];
-  
-    for(const user of users){
-      const {
-          name,
-           apellido,
-            cedula,
-             email,
-              password
-      } = user
-  
-      if (!name || !apellido || !email || !password) {
-          return res.status(400).json({ error: 'Nombre, apellido, correo y contraseña son requeridos' });
-      }
-  
-      if (password.length < 7) {
-          return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
-      }
-  
-      const existingUser = await UserModel.existingCedula(cedula)
-  
-      if (existingUser) {
-        
-         errors.push({error:'El usuario ya existe',name})
-         continue
-      }
-  
-      const hashedPassword = await hash(password, 10);
-  
-      usersToInsert.push({
-  
-      name,
-      apellido,
-      cedula,
-      email,
-       hashedPassword,
-       imagePath
-      })
-    // Llamar a la función de inserción de múltiples productos en el modelo
-    const result = await UserModel.addMultipleUser(usersToInsert)
-  
-    createdUsers.push({ id: result.insertId, name });
-  
-    }
-  
-  
-  
-    
-    if (errors.length > 0) {
-      res.status(400).json({ errors });
-  } else {
-      res.status(201).json({ createdUsers });
-  }
-  
-  
-     } catch (error) {
-      console.error('Error ejecutando la consulta:', error);
-     
-      res.status(500).json({ error: 'Error interno del servidor' });
-     }
-  
-  
-  }
-  
-  
-static deleteMultipleUsers= async (req,res)=>{
-    const { users } = req.body
- 
- 
+    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
+
+    console.log(users);
+
     if (!Array.isArray(users)) {
-     return res.status(400).json({ error: 'Users must be an array' });
-  }
- 
-  try {
-     const deletePromises = users.map(user=>{
-         const { id } = user
-         return UserModel.deleteUser(id)
-     })
- 
-     await Promise.all(deletePromises)
-         
-     res. status(200).json({ message:'Usarios eliminados exitosamente'})
- 
-     
-  } catch (error) {
-     res.status(500).json({ error: 'Error interno del servidor' },error);
-  }
- 
- }
- 
- static requestPasswordRequest= async (req,res)=>{
-     const { email } = req.body;
+        return res.status(400).json({ error: 'Users must be an array' });
+    }
 
-     try{
-     
-     const user = UserModel.findByEmail(email)
-
-        if(!user) {
-        
-        return res.status(404).json({ error: 'Usuario no encontrado' });
-
-        }
-
-
-  const token =  tokenService.generateToken(user.id)
-
-  const emailSent = await sendEmail(email,'Password Reset',`You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
-              `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
-              `http://localhost:3001/resetPassword/${token}\n\n` +
-              `If you did not request this, please ignore this email.\n`)
-   
-              
-              if(!emailSent){
-                return res.status(500).json({ error: 'Error al enviar el correo' })
-              }
-
-
-              res.status(200).json('Rcovery email sent')
-            
-            }catch(error){
-                res.status(500).json({ error: 'Error interno del servidor' },error);
-            }
-
- }
-
-
-
- static resetPassword = async (req,res)=>{
-    const { token } = req.params;
-    const { newPassword } = req.body;
+    const errors = [];
+    const createdUsers = [];
 
     try {
-        const userId= await tokenService.verifyToken(token)
+        const usersToInsert = [];
 
-        if(!userId){
-            return res.status(400).json({ message: 'Invalid or expired token' });
+        for (const user of users) {
+            const { name, apellido, cedula, email, password } = user;
+
+            if (!name || !apellido || !email || !password) {
+                errors.push({ error: 'Nombre, apellido, correo y contraseña son requeridos', user });
+                continue; // Cambiado para seguir insertando otros usuarios
+            }
+
+            if (password.length < 7) {
+                errors.push({ error: 'La contraseña debe tener al menos 7 caracteres', user });
+                continue; // Cambiado para seguir insertando otros usuarios
+            }
+
+            const existingUser = await UserModel.existingCedula(cedula);
+
+            if (existingUser) {
+                errors.push({ error: 'El usuario ya existe', name });
+                continue; // Cambiado para seguir insertando otros usuarios
+            }
+
+            const hashedPassword = await hash(password, 10);
+
+            usersToInsert.push({
+                name,
+                apellido,
+                cedula,
+                email,
+                hashedPassword,
+                imagePath
+            });
         }
 
-        const hashedPassword = await hash(newPassword, 10);
+        if (usersToInsert.length > 0) {
+            // Llama a la función de inserción de múltiples usuarios en el modelo
+            const result = await UserModel.addMultipleUser(usersToInsert);
+            createdUsers.push(...usersToInsert.map(user => ({ name: user.name }))); // Solo agregar nombres
+        }
 
-        await  UserModel.updatePassword(userId, hashedPassword);
-
-        return res.json({message:'Password has been reset successfully'})
-
+        if (errors.length > 0) {
+            res.status(400).json({ errors });
+        } else {
+            res.status(201).json({ createdUsers });
+        }
 
     } catch (error) {
-        res.status(500).json({message:' Error reseting password'})
+        console.error('Error ejecutando la consulta:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
+}
 
+
+static deleteMultipleUsers= async (req,res)=>{
+   const { users } = req.body
+
+
+   if (!Array.isArray(users)) {
+    return res.status(400).json({ error: 'Users must be an array' });
+ }
+
+ try {
+    const deletePromises = users.map(user=>{
+        const { id } = user
+        return UserModel.deleteUser(id)
+    })
+
+    await Promise.all(deletePromises)
+        
+    res. status(200).json({ message:'Usarios eliminados exitosamente'})
+
+    
+ } catch (error) {
+    res.status(500).json({ error: 'Error interno del servidor' },error);
  }
 
 }
-
 /*
 const getcorreo = async (req, res) => {
     const { email, password } = req.body;
@@ -721,5 +583,55 @@ const getcorreo = async (req, res) => {
 };
 
 */
+
+static requestPasswordReset= async (req,res)=>{
+  const { email }= req.body;
+
+  const user = UserModel.findByEmail(email)
+
+  if(!user){
+    return res.status(404).send('Correo no encontrado')
+  }
+ 
+  const token = tokenService.generateToken(user.id)
+
+  const emailSent = await sendEmail(email,'Password Reset',`You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
+              `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
+              `http://localhost:3001/resetPassword/${token}\n\n` +
+              `If you did not request this, please ignore this email.\n`)
+   
+
+              if (!emailSent) {
+                return res.status(500).send('Error sending email');
+            }
+    
+            res.status(200).send('Recovery email sent');
+
+}
+
+
+static resetPassword= async (req,res)=>{
+    const { token }  = req.params;
+    const {newPassword} = req.body;
+
+    try {
+
+        const userId= await tokenService.verifyToken(token);
+        
+        if(!userId){
+            return res.status(400).json({ message: 'Invalid or expired token' });
+        }
+        const hashedPassword = await hash(newPassword, 10);
+
+        await UserModel.updateUserPassword(userId,hashedPassword)
+
+       return res.status(200).json({ message: 'Password has been reset successfully' });
+        
+    } catch (error) {
+        res.status(500).json({ message: 'Error resetting password', error: error.message });    
+    }
+}
+}
+
 
 export default userController
