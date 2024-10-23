@@ -169,18 +169,25 @@ static getProductsByPrinceRange= async (req,res)=>{
 }
 
 
+
+
 static addMultipleProducts = async (req, res) => {
-    const { products } = req.body;
 
-    let parsedProducts;
-    try {
-        parsedProducts = JSON.parse(products);
-    } catch (error) {
-        return res.status(400).json({ error: 'Products must be a valid JSON array' });
-    }
+// Convierte users de string a objeto
+let products;
+try {
+    products = JSON.parse(req.body.products || '[]');
+} catch (error) {
+    return res.status(400).json({ error: 'Invalid JSON format for users' });
+}
 
-    if (!Array.isArray(parsedProducts)) {
-        return res.status(400).json({ error: 'Products must be an array' });
+
+    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
+
+    console.log(products)
+
+    if (!Array.isArray(products)) {
+        return res.status(400).json({ error: 'products must be an array' });
     }
 
     const errors = [];
@@ -190,15 +197,16 @@ static addMultipleProducts = async (req, res) => {
 
     try {
         const productsToInsert = [];
-
-        for (let i = 0; i < parsedProducts.length; i++) {
-            const product = parsedProducts[i];
-            const imageFile = req.files[i];
-
-            const imagePath = imageFile ? `/uploads/${imageFile.filename}` : null;
-
-            // Validar campos requeridos
-            const { nombre_producto, descripcion, precio, stock, id_categoria, activo = 'activo', id_proveedor } = product;
+        for (const product of products) {
+            const {
+                nombre_producto,
+                descripcion,
+                precio,
+                stock,
+                id_categoria,
+                activo = 'activo',
+                id_proveedor
+            } = product;
 
             if (!nombre_producto || !descripcion || !precio || !stock || !id_categoria) {
                 errors.push({ error: 'nombre_producto, descripcion, precio, stock y id_categoria son requeridos' });
@@ -206,14 +214,14 @@ static addMultipleProducts = async (req, res) => {
             }
 
             const precioNum = parseFloat(precio);
-            const stockNum = parseFloat(stock);
+            const stockNum = parseFloat(stock, 10);
 
-            if (isNaN(precioNum) || precioNum < 0) {
+            if (isNaN(precioNum) || !Number.isFinite(precioNum) || precioNum < 0) {
                 errors.push({ error: 'El precio debe ser un número positivo' });
                 continue;
             }
 
-            if (isNaN(stockNum) || stockNum < 0) {
+            if (isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0) {
                 errors.push({ error: 'El stock debe ser un número entero positivo' });
                 continue;
             }
@@ -222,6 +230,8 @@ static addMultipleProducts = async (req, res) => {
 
             // Verificar si el producto ya existe
             const [existingProduct] = await ProductModel.existingProduct(connection, nombre_producto);
+            console.log('victor',existingProduct); // Add this line to see what is returned
+
             if (existingProduct.length > 0) {
                 errors.push({ error: 'El producto ya existe', nombre_producto });
                 continue;
@@ -241,11 +251,10 @@ static addMultipleProducts = async (req, res) => {
             });
         }
 
-        // Insertar múltiples productos
-        for (const productToInsert of productsToInsert) {
-            const result = await ProductModel.addProduct(connection, productToInsert.codigo, productToInsert.nombre_producto, productToInsert.descripcion, productToInsert.precio, productToInsert.stock, productToInsert.id_categoria, productToInsert.activo, productToInsert.id_proveedor, productToInsert.imagePath);
-            createdProducts.push({ id: result.insertId, nombre_producto: productToInsert.nombre_producto });
-        }
+        // Llamar a la función de inserción de múltiples productos en el modelo
+        const result = await ProductModel.addMultipleProducts(connection, productsToInsert);
+
+        createdProducts.push({ id: result.insertId });
 
         // Confirmar transacción
         await connection.commit();
@@ -255,6 +264,7 @@ static addMultipleProducts = async (req, res) => {
         } else {
             res.status(201).json({ createdProducts });
         }
+
     } catch (error) {
         console.error('Error ejecutando la consulta:', error);
         await connection.rollback(); // Deshacer la transacción en caso de error
@@ -263,7 +273,6 @@ static addMultipleProducts = async (req, res) => {
         connection.release(); // Liberar el connection pool
     }
 };
-
 
 static deleteMultipleProducts= async (req,res)=>{
     const { products } = req.body
