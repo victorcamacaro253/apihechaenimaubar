@@ -288,13 +288,16 @@ static loginUser = async (req, res) => {
             return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
 
-        // Generar un token JWT
+        /*Generar un token JWT
         const token = sign(
             { id: user.id, correo: user.correo },
             process.env.JWT_SECRET, // Asegúrate de tener JWT_SECRET en tus variables de entorno
             { expiresIn: '1h' } // Expiración del token, por ejemplo, 1 hora
         );
+*/
 
+      const token= tokenService.generateToken(user.id,user.correo,user.rol)
+      
         // Generar un código aleatorio
         const randomCode = randomBytes(8).toString('hex'); // Genera un código aleatorio de 8 caracteres
 
