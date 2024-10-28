@@ -10,11 +10,14 @@ import cookieParser from 'cookie-parser';
 import csrf from 'csurf';
 import exportRoutes from './routes/exportRoutes.js' 
 import passport from 'passport';
+import morgan from 'morgan';
 import authRoutes from './routes/authRoutes.js';  // Rutas de autenticación
 import './controllers/authControllers.js';  // Asegúrate de que se configure passport
 import './controllers/authFacebookControllers.js'
 import './controllers/authGithubControllers.js'
 import './controllers/authTwitterControllers.js'
+
+
 const app = express();
 
 
@@ -45,6 +48,11 @@ app.use(helmet.contentSecurityPolicy({
     },
   }))
 */
+
+app.use(morgan('dev'));  // 'dev' es para formato de desarrollo
+
+
+
 // Rutas de autenticación
 app.use(authRoutes);
 
@@ -82,20 +90,31 @@ app.options('/api/users/:id', (req, res) => {
     res.sendStatus(200);
 });
 
-
 //Usa las rutas de usuarios 
-app.use('/api',userRoutes);
+app.use('/users',userRoutes);
 
 
 //Usa las rutas de productos
-app.use('/api2',productsRoutes);
+app.use('/products',productsRoutes);
 
 
 //Usa las rutas de las compras
-app.use('/api3',comprasRoutes);
+app.use('/compras',comprasRoutes);
 
 //Usa las rutas para exportar documentos
-app.use('/api4',exportRoutes);
+app.use('/export',exportRoutes);
+
+// Middleware para manejar rutas no definidas (404)
+app.use((req, res, next) => {
+  res.status(404).json({ message: 'Ruta no encontrada' });
+});
+
+// Middleware para manejar errores generales
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Ocurrió un error en el servidor' });
+});
+
 
 const PORT = process.env.PORT ?? 3000
 
