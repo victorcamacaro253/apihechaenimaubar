@@ -6,14 +6,24 @@ const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes 
 import UserModel from '../models/userModels.js'
 import sendEmail from '../services/emailService.js';
 import tokenService from '../services/tokenService.js';
-import { error } from 'console';
+import redis from '../db/redis.js';
 
 class userController{
 
 static getAllUser = async (req, res) => {
-    res.header('Access-Control-Allow-Origin','*')
+   // res.header('Access-Control-Allow-Origin','*')
     try {
+
+     const cachedUsers= await redis.get('users');
+     if (cachedUsers) {
+        console.log('datos obtenidos desde redis')
+        return res.status(200).json(JSON.parse(cachedUsers))
+     }
+
+
         const results = await UserModel.getAllUsers();
+
+        await redis.set('users',JSON.stringify(results),'EX',600)
 
         res.json(results);
     } catch (err) {
@@ -26,6 +36,16 @@ static getUserById = async (req, res) => {
     const { id } = req.params;
 
     try {
+
+       const cachedUser= await redis.get(`user:${id}`)
+
+       if (cachedUser) {
+        console.log('Datos obtenidos desde redis')
+        return res.status(200).json(JSON.parse(cachedUser))
+        
+       }
+
+
         // Llama al método del modelo para obtener el usuario por ID
         const user = await UserModel.getUserById(id);
 
@@ -37,6 +57,7 @@ static getUserById = async (req, res) => {
                 message: `No se pudo encontrar un usuario con el ID proporcionado: ${id}` 
             });
         }
+        await redis.set(`user:${id}`,JSON.stringify(user),'EX',600)
 
         // Envía el usuario encontrado como respuesta
         res.json(user);
@@ -74,6 +95,9 @@ static addUser = async (req, res) => {
 
         const hashedPassword = await hash(password, 10);
         const result = await UserModel.addUser(name, apellido, cedula, email,hashedPassword);
+
+        await redis.del('users');
+
 
         //await connection.commit();
         res.status(201).json({ id: result.insertId, name, email });
@@ -136,7 +160,12 @@ static updateUser = async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
+        await redis.del(`user:${id}`);
+        await redis.del('users');
+        
+
         res.status(200).json({ message: 'Usuario actualizado exitosamente' });
+        
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -149,14 +178,14 @@ static deleteUser = async (req, res) => {
     const { id } = req.params;
   
       // Configurar encabezados CORS
-      res.header('Access-Control-Allow-Origin', '*');
+     /* res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
       res.header('Access-Control-Allow-Headers', 'Content-Type');
   
       // Manejar solicitudes OPTIONS para preflight
       if (req.method === 'OPTIONS') {
           return res.sendStatus(204);
-      }
+      }*/
 
 
     try {
@@ -165,6 +194,10 @@ static deleteUser = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
+
+        await redis.del(`user:${id}`);
+        await redis.del('users');
+        
 
         res.status(200).json({ message: 'Usuario eliminado exitosamente' });
     } catch (err) {
@@ -235,6 +268,7 @@ static searchUsers = async (req, res) => {
     const { name, apellido, cedula } = req.query; // Usa req.query para parámetros GET
 
     // Configurar encabezado CORS
+    /*
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
@@ -242,6 +276,7 @@ static searchUsers = async (req, res) => {
     if (req.method === 'OPTIONS') {
         return res.sendStatus(204);
     }
+        */
 
     try {
         // Llamar a la función del modelo
@@ -259,6 +294,7 @@ static loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     // Configurar encabezados CORS
+    /*
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
@@ -266,7 +302,7 @@ static loginUser = async (req, res) => {
     // Manejar solicitudes OPTIONS para preflight
     if (req.method === 'OPTIONS') {
         return res.sendStatus(204);
-    }
+    }*/
 
     // Validación de entrada
     if (!email || !password) {
@@ -296,7 +332,7 @@ static loginUser = async (req, res) => {
         );
 */
 
-      const token= tokenService.generateToken(user.id,user.correo,user.rol)
+    //  const token= tokenService.generateToken(user.id,user.correo,user.rol)
       
         // Generar un código aleatorio
         const randomCode = randomBytes(8).toString('hex'); // Genera un código aleatorio de 8 caracteres
@@ -346,21 +382,17 @@ static getPerfil = async (req, res) => {
 
 static getUserPerfil= async (req,res) => {
     console.log('req.params:', req.params);
-const id = req.params.id;
+const {id} = req.params;
     
 
     if (!id) {
         return res.status(400).json({ error: 'ID del usuario es requerido' });
     }
 
-
-
     try {
-        
-       
+               
         // Consultar el perfil del usuario en la base de datos
         const results = await UserModel.getUserPerfil(id);
-
 
         if (results.length === 0) {
             return res.status(404).json({ error: 'Perfil no encontrado' });
