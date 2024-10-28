@@ -1,14 +1,11 @@
 import express, { json } from 'express';
 import session from 'express-session';
-import userRoutes from './routes/userRoutes.js';
-import productsRoutes from './routes/productsRoutes.js'
-import comprasRoutes from './routes/comprasRoutes.js'
 import limiter from './rateLimiter.js';
 import helmet from 'helmet';
+import routes from './routes/index.js';  // Importa el archivo de rutas
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import csrf from 'csurf';
-import exportRoutes from './routes/exportRoutes.js' 
 import passport from 'passport';
 import morgan from 'morgan';
 import authRoutes from './routes/authRoutes.js';  // Rutas de autenticación
@@ -90,19 +87,12 @@ app.options('/api/users/:id', (req, res) => {
     res.sendStatus(200);
 });
 
-//Usa las rutas de usuarios 
-app.use('/users',userRoutes);
 
 
-//Usa las rutas de productos
-app.use('/products',productsRoutes);
+// Rutas
+app.use(routes);  // Usa el archivo de rutas
 
 
-//Usa las rutas de las compras
-app.use('/compras',comprasRoutes);
-
-//Usa las rutas para exportar documentos
-app.use('/export',exportRoutes);
 
 // Middleware para manejar rutas no definidas (404)
 app.use((req, res, next) => {
