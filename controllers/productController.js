@@ -367,6 +367,21 @@ static filterProduct = async (req, res) => {
 
 
 
+static getTopSelling = async (req,res) =>{
+  
+  try{
+
+    const topSelling = await ProductModel.getTopSelling();
+    return res.json(topSelling);
+    
+  }catch(error){
+    console.error('Error ejecutando la consulta:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+
+
+  }
+
+}
 
 }
 
