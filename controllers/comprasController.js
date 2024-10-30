@@ -134,6 +134,13 @@ res.json(result);
     // Confirmar la transacción
     await connection.commit();
 
+    // Llamar a actualizarProductosMasVendidos fuera de la transacción
+for (const producto of insertProductos) {
+  const { id_producto, cantidad } = producto;
+  await ProductModel.actualizarProductosMasVendidos(id_producto, cantidad);
+}
+
+
     res.status(201).json({ id_compra, message: 'Compra realizada con éxito' });
 
   } catch (err) {
