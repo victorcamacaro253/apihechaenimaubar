@@ -12,7 +12,7 @@ const rolePermisosModel ={
     },
 
     async  getRoleById(id){
-        const role = await query('SELECT * FROM roles WHERE id = ?', id);
+        const role = await query('SELECT * FROM roles WHERE id_rol = ?', id);
         return role;
         },
     
@@ -21,8 +21,8 @@ const rolePermisosModel ={
             return role;
             },
 
-            async createRole(role,descripcion){
-                const result = await query('INSERT INTO roles (rol,descripcion,created_at) VALUES(?,?,NOW())', role,descripcion);
+            async createRole(role,description){
+                const result = await query('INSERT INTO roles (rol,descripcion,created_at) VALUES(?,?,NOW())',[ role,description]);
 
                 return result;
                 },
@@ -49,7 +49,7 @@ const rolePermisosModel ={
 
                         },
 
-                        async  getPermisoById(id){
+                        async  getPermisosById(id){
                             const permiso = await query('SELECT * FROM permisos WHERE id = ?', id);
                             return permiso;
                             },
@@ -61,20 +61,20 @@ const rolePermisosModel ={
                                 },
                                 
                                 async createPermiso(permiso){
-                                    const sql='INSERT INTO permisos (permiso,created_at) VALUES(?,?)'
+                                    const sql='INSERT INTO permisos (permiso,created_at) VALUES(?,NOW())'
                                     const result = await query(sql,[permiso]);
                                         return result;
                                         },
 
                                         async updatePermiso(id, permiso){
-                                            const sql='UPDATE permisos SET permiso= ? WHERE id_permiso=?'
+                                            const sql='UPDATE permisos SET permiso= ? WHERE id=?'
                                             const result = await query(sql,[permiso,id])
                                                 return result;
                                          },
 
-                                         async deletePermiso(){
+                                         async deletePermiso(id){
                                             const sql='DELETE FROM permisos WHERE id_permiso=?'
-                                            const result = await query(sql,id)
+                                            const result = await query(sql,[id])
                                             return result;
                                          },
                                                 
