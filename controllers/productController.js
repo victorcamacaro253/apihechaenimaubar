@@ -367,21 +367,89 @@ static filterProduct = async (req, res) => {
 
 
 
-static getTopSelling = async (req,res) =>{
-  
-  try{
-
-    const topSelling = await ProductModel.getTopSelling();
-    return res.json(topSelling);
-    
-  }catch(error){
-    console.error('Error ejecutando la consulta:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
 
 
-  }
 
-}
+static updateProduct = async (req, res) => {
+    const { id } = req.params;
+    const { nombre_producto, descripcion, precio, stock, id_categoria,id_proveedor } = req.body;
+
+    if (!nombre_producto && !descripcion && !precio && !stock  && !id_categoria && !id_proveedor) {
+
+        return res.status(400).json({ error: 'No hay datos para actualizar' });
+    }
+
+
+    const precioNum = parseFloat(precio);
+   const stockNum = parseFloat(stock, 10);
+
+
+    try {
+        let updateFields = [];
+        let values = [];
+
+        if (nombre_producto) {
+            updateFields.push('nombre_producto');
+            values.push(nombre_producto);
+        }
+
+        if (descripcion) {
+            updateFields.push('descripcion ');
+            values.push(descripcion);
+        }
+
+        if (precioNum) {
+            updateFields.push('precio');
+            values.push(precioNum);
+        }
+
+        if (stockNum) {
+            updateFields.push('stock');
+            values.push(stockNum);
+        }
+        
+        if (id_categoria) {
+            updateFields.push('id_categoria');
+            values.push(id_categoria);
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ error: 'No hay datos para actualizar' });
+        }
+
+        const results = await ProductModel.updateProduct(id, updateFields,values);
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+
+        res.status(200).json({ message: 'Producto actualizado exitosamente' });
+    } catch (err) {
+        console.error('Error ejecutando la consulta:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
+
+  static getTopSelling = async  (req, res) => {
+    try {
+        const results = await ProductModel.getTopSelling();
+        res.status(200).json(results);
+
+
+        } catch (error) {
+            console.error('Error ejecutando la consulta:', error);
+            res.status(500).json({ error: 'Error interno del servidor' });
+
+       }
+
+
+
+       }
+
+
+
 
 }
 
