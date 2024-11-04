@@ -64,8 +64,8 @@ async searchProductByName(nombre_producto) {
     return results;
 },
 
-async updateProductStock(id_producto,newStock){
-    const results = await _query('UPDATE productos SET stock = stock - ? WHERE id_producto=?',[newStock,id_producto]);
+async updateProductStock(connection,id_producto,newStock){
+    const results = await connection.query('UPDATE productos SET stock =  ? WHERE id_producto=?',[newStock,id_producto]);
     return results;
 },
 async getProductStock(connection,id_producto){
@@ -98,46 +98,30 @@ async addMultipleProducts (product){
    return result;
 
 },
-    async filterProducts ( category, minPrice, maxPrice ) {
-    let queryl = 'SELECT * FROM productos INNER JOIN categorias ON productos.id_categoria=categorias.id_categoria WHERE 1=1';
-    const params = [];                      
-  
-    if (category) {
-      queryl += ' AND categorias.categoria = ?';
-      params.push(category);
-    }
-    if (minPrice) {
-      queryl += ' AND precio >= ?';
-      params.push(minPrice);
-    }
-    if (maxPrice) {
-      queryl += ' AND precio <= ?';
-      params.push(maxPrice);
-    }
-  
-    const rows = await query(queryl, params);
-    return rows;
-  },
 
-  
- async getTopSelling(){
+async getTopSelling(){
+    const sql= `SELECT id_producto, nombre_producto, precio,vendido  FROM productos ORDER BY vendido DESC `;
+    const  result = await _query(sql);
+    return result;
 
-  let SQL = 'SELECT id_producto, nombre_producto, precio,vendido FROM productos ORDER BY vendido DESC';
-  const rows = await query(SQL);
-  return rows;
+},
 
- },
 
- 
-async actualizarProductosMasVendidos(id,cantidad){
-  const SQL = ` Update  productos set vendido = vendido +  ? WHERE id_producto = ?`;
-  const results = await query(SQL,[cantidad,id]);
-  return results;
+
+async updateTopSelling (id_producto,quantity){
+    const SQL = ` Update  productos set vendido = vendido +  ? WHERE id_producto = ?`;
+
+    const results = await _query(SQL,[quantity,id_producto]);
+     return results;
+        
+        
+
+
+
 }
 
 
-
-};
+}
 
 
 export default ProductModel;
