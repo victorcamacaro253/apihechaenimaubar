@@ -118,7 +118,50 @@ async updateTopSelling (id_producto,quantity){
 
 
 
+},
+    
+async importProducts(products){
+  const queries = products.map((product) => {
+    const { codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagePath } = product;
+
+    return _query('INSERT INTO productos (codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagen) VALUES (?,?,?,?,?,?,?,?,?)',
+        [codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagePath || '']
+    )
+})
+
+const result = await Promise.all(queries);
+return result;
+},
+
+    
+async getProductsSoldByDateRange (startDate,endDate){
+const SQL= `SELECT 
+
+        p.id_producto, 
+        p.nombre_producto,
+         p.precio AS precio_producto, 
+         SUM(pc.cantidad) AS total_vendido,
+          SUM(pc.cantidad * p.precio) AS total_ingresos 
+          FROM 
+          productos_compras pc 
+          JOIN 
+          compras c ON pc.id_compra = c.id_compra
+           JOIN 
+           usuario u ON c.id_usuario = u.id 
+           JOIN 
+           productos p ON pc.id_producto = p.id_producto
+            WHERE 
+            c.fecha BETWEEN ? AND ?
+             GROUP BY
+              p.id_producto, p.nombre_producto, p.precio 
+             ORDER 
+             BY total_vendido DESC;`
+
+             const result= await _query(SQL,[startDate,endDate])
+
+             return result
 }
+
 
 
 }
