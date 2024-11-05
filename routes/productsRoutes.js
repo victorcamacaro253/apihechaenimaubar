@@ -16,6 +16,7 @@ router.get('/categoria/',productController.getProductsByCategoria)
 //Ruta para obtener los productos por un rango de precio
 router.get('/price',productController.getProductsByPrinceRange)
 
+router.get('/salesByDate', productController.getProductsSoldByDateRange);
 
 //Ruta para obtener los productos por id
 router.get('/:id',productController.getProductsById)
@@ -37,6 +38,7 @@ router.put('/:id',productController.updateProduct)
 router.post('/deleteMultipleProducts',productController.deleteMultipleProducts)
 
 
+router.post('/import',upload.single('file'),productController.importProducts)
 
 //Ruta para eliminar el producto
 
