@@ -199,6 +199,55 @@ usuario u ON c.id_usuario = u.id
 const results = await query(SQL,[id,startDate, endDate]);
 return results;
 
+},
+    
+async getEstadisticasCompras(userId, startDate, endDate) {
+  let SQL = `SELECT 
+              c.id_compra, 
+              c.fecha, 
+              c.total_compra,
+              u.id AS id_usuario, 
+              u.nombre, 
+              u.apellido, 
+              u.cedula, 
+              u.correo, 
+              mp.id_producto, 
+              mp.cantidad, 
+              mp.precio,
+              p.nombre_producto
+            FROM 
+              productos_compras AS mp
+            JOIN productos p ON mp.id_producto = p.id_producto
+            JOIN compras c ON mp.id_compra = c.id_compra
+            JOIN usuario u ON c.id_usuario = u.id
+            WHERE 1=1`;
+
+  const params = [];
+
+  if (userId) {
+    SQL += ` AND u.id = ?`;
+    params.push(userId);
+  }
+  
+  if (startDate) {
+    SQL += ` AND c.fecha >= ?`;
+    params.push(startDate); // Asumiendo que startDate ya está en formato 'YYYY-MM-DD HH:MM:SS'
+  }
+
+  if (endDate) {
+    SQL += ` AND c.fecha <= ?`;
+    params.push(endDate); // Asumiendo que endDate ya está en formato 'YYYY-MM-DD HH:MM:SS'
+  }
+ // console.log(params)
+
+  try {
+    const results = await query(SQL, params);
+   // console.log(results)
+    return results;
+  } catch (error) {
+    console.error('Error al obtener las estadísticas de compras:', error);
+    throw error;  // Lanzamos el error para manejarlo donde se llama a la función.
+  }
 }
 
 
