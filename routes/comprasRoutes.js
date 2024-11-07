@@ -7,29 +7,33 @@ const router = Router();
 
 
 //Ruta para obtener el listado de las compras
-router.get('/compras',comprasController.getCompras);
+router.get('/',comprasController.getCompras);
 
 //Ruta para obtener las compras de un usuario por su nombre
-router.get('/compras/SearchUserCompras/',comprasController.getComprasByUsuario)
+router.get('/SearchUserCompras/',comprasController.getComprasCountByUsuario)
 
-router.get('/compra/fecha', comprasController.getComprasByDate);
+//Rutas para obtener las comprar por fecha
+router.get('/fecha', comprasController.getComprasByDate);
 
 //Ruta para obtener estadisticas  de las compras en un rango de tiempo
 
 router.get('/stats',comprasController.getEstadisticasCompras )
 
-router.get('/compras/comprasByUser',comprasController.getComprasCountByUsuario)
+
+//Ruta para obtener las cantidad de compras por usuario
+router.get('/comprasByUser',comprasController.getComprasCountByUsuario)
 
 //Ruta para obtener las compras de un usuario
-router.get('/compras/:id',comprasController.getComprasByUsuarioId);
+router.get('/:id',comprasController.getComprasByUserId);
 
 
 //Ruta para comprar un producto
-router.post('/compras',comprasController.compraProduct);
+router.post('/',comprasController.compraProduct);
+
 
 
 //Ruta para eliminar una compra
-router.delete('/compras/:id',comprasController.deleteCompra)
+router.delete('/:id',comprasController.deleteCompra)
 
 
 export default router
