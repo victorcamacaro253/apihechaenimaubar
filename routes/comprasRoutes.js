@@ -14,6 +14,9 @@ router.get('/compras/SearchUserCompras/',comprasController.getComprasByUsuario)
 
 router.get('/compra/fecha', comprasController.getComprasByDate);
 
+//Ruta para obtener estadisticas  de las compras en un rango de tiempo
+
+router.get('/stats',comprasController.getEstadisticasCompras )
 
 router.get('/compras/comprasByUser',comprasController.getComprasCountByUsuario)
 
