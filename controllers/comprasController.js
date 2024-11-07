@@ -424,6 +424,44 @@ for (const producto of insertProductos) {
     }
   }
 
+  
+
+      static getEstadisticasCompras = async (req,res)=>{
+      const {userId,startDate,endDate} = req.query
+      console.log(userId,startDate,endDate)
+        try {
+          const results = await  comprasModel.getEstadisticasCompras(userId,startDate,endDate)
+          
+          if(!results){
+            return res.status(404).json({error: 'Usuario no encontrado'})
+          }
+
+        const  total= results.length;
+        const totalCompra = results.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
+        const promedioCompra = totalCompra / total; // Promedio de compra
+        const totalProductos = results.reduce((acc, curr) => acc + curr.cantidad, 0); // Total de productos comprados
+        const promedioProductosPorCompra = totalProductos / total; // Promedio de productos por compra
+        const primeraCompra = results[0].fecha; // Fecha de la primera compra (más antigua)
+        const ultimaCompra = results[results.length - 1].fecha; // Fecha de la última compra (más reciente)
+
+
+          res.status(200).json({
+            total,
+            totalCompra,
+            promedioCompra,
+            totalProductos,
+            promedioProductosPorCompra,
+            primeraCompra,
+            ultimaCompra})
+
+          
+        } catch (error) {
+          console.log(error)
+          return  res.status(500).json({error: 'Error interno del servidor'})
+
+
+        }
+      }
 
     }
 
