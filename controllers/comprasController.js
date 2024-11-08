@@ -3,18 +3,24 @@ import comprasModel from '../models/comprasModel.js';
 import ProductModel from '../models/productModel.js';
 import UserModel from '../models/userModels.js';
 //import comprasModel from '../models/firebase/comprasModel_firebase.js';
+import fetch  from 'node-fetch'; // Importa la función fetch de node-fetch
+import notificationService from '../services/notificationService.js';
+
 
 class comprasController{
+
 
 static getCompras = async (req, res) => {
   try {
     const result = await comprasModel.getComprasDetails();
-console.log(result)
-    const compraAgrupada = result.reduce((acc, row) => {
+
+    const compraAgrupada = new Map();
+
+    for (const row of result) {
       const { id_compra, fecha, total_compra, id_usuario, nombre, apellido, cedula, correo, id_producto, nombre_producto, cantidad, precio } = row;
 
-      if (!acc[id_compra]) {
-        acc[id_compra] = {
+      if (!compraAgrupada.has(id_compra)) {
+        compraAgrupada.set(id_compra, {
           id_compra,
           fecha,
           total: total_compra,
@@ -26,30 +32,27 @@ console.log(result)
             correo,
           },
           productos: [],
-        };
+        });
       }
 
-      acc[id_compra].productos.push({
+      compraAgrupada.get(id_compra).productos.push({
         id_producto,
         nombre: nombre_producto,
         cantidad,
         precio,
       });
+    }
 
-      return acc;
-    }, {});
-
-    return res.json(Object.values(compraAgrupada));
+    // Convertir a array y enviar como respuesta
+    return res.json([...compraAgrupada.values()]);
   } catch (error) {
     console.error('Error ejecutando la consulta', error);
     return res.status(500).json({
       error: 'Error interno del servidor',
-      details: error.message, // Incluye detalles del error si es seguro hacerlo
+      details: error.message,
     });
   }
 };
- 
-
 
 
 
@@ -77,6 +80,9 @@ res.json(result);
  }
 
 
+//funcion para ingresar producto,se podria usar un procedimiento almacenado para manejar las dos inserciones que se hacen pero como mi
+// version no es comptable con JSON_TABLE no se puede
+
 
  static compraProduct = async (req, res) => {
   const { id_usuario, productos } = req.body;
@@ -93,6 +99,7 @@ res.json(result);
       return res.status(400).json({ error: 'Datos de producto inválidos' });
     }
     totalCompra += cantidad * precio; // Sumar al total
+    
   }
 
   // Iniciar transacción
@@ -118,27 +125,50 @@ res.json(result);
     const id_compra = await comprasModel.addCompra(connection, id_usuario,totalCompra);
 
 
-    console.log(id_compra)
+    
 
     // Insertar productos en la compra
     await comprasModel.compraProduct(connection, id_compra, insertProductos);
+
 
     // Actualizar el stock del producto
     for (const producto of insertProductos) {
       const { id_producto, cantidad } = producto;
       const stock = await ProductModel.getProductStock(connection, id_producto);
+      console.log('stock',stock)
+      console.log('cantidad',cantidad)
       const newStock = stock - cantidad;
+      console.log('new stock',newStock)
       await ProductModel.updateProductStock(connection, id_producto, newStock);
     }
 
     // Confirmar la transacción
     await connection.commit();
+/*
+    // Notificar al webhook usando fetch
+    await fetch('http://localhost:3000/webhook/compra', {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+          id_compra,
+          id_usuario,
+          totalCompra,
+          productos,
+      }),
+  });
 
-    // Llamar a actualizarProductosMasVendidos fuera de la transacción
+*/
+
+
+   // Llamar a actualizarProductosMasVendidos fuera de la transacción
 for (const producto of insertProductos) {
   const { id_producto, cantidad } = producto;
-  await ProductModel.actualizarProductosMasVendidos(id_producto, cantidad);
+  await ProductModel.updateTopSelling(id_producto, cantidad);
 }
+
+ notificationService.notifyClients(`Notificación de compra recibida: ${id_compra}, Usuario: ${id_usuario}, Total: ${totalCompra}`)
 
 
     res.status(201).json({ id_compra, message: 'Compra realizada con éxito' });
@@ -153,6 +183,10 @@ for (const producto of insertProductos) {
   }
 };
 
+
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
  static deleteCompra = async (req,res) => {
  const { id } = req.params;
 
@@ -166,8 +200,8 @@ for (const producto of insertProductos) {
 
   res.status(200).json({message:'compra eliminada exitosamente'})
   
- } catch (err) {
-  console.error('Error ejecutando la consulta',err)
+ } catch (error) {
+  console.error('Error ejecutando la consulta',error)
   res.status(500).json({erro:'Error interno del servidor'});
   
  }
@@ -236,17 +270,17 @@ for (const producto of insertProductos) {
 
 
  static getComprasByUserId = async (req, res) => {
-  const { userId } = req.params;
-  console.log(userId);
+  const { id } = req.params;
+  console.log(id);
 
-  if (!userId) {
+  if (!id) {
     return res.status(400).json({ error: 'No se proporcionó un Id' });
   }
 
   try {
-    const result = await comprasModel.getComprasByUserId(userId);
+    const result = await comprasModel.getComprasByUserId(id);
     if (!result.length) {  // Cambiar para verificar si hay resultados
-      return res.status(400).json({ error: 'No se encontraron compras para el id proporcionado' });
+      return res.status(400).json({ error: `No se encontraron compras para el id ${id} proporcionado` });
     }
 
     // Procesar los resultados
@@ -424,45 +458,47 @@ for (const producto of insertProductos) {
     }
   }
 
-  
-
-      static getEstadisticasCompras = async (req,res)=>{
-      const {userId,startDate,endDate} = req.query
-      console.log(userId,startDate,endDate)
-        try {
-          const results = await  comprasModel.getEstadisticasCompras(userId,startDate,endDate)
-          
-          if(!results){
-            return res.status(404).json({error: 'Usuario no encontrado'})
-          }
-
-        const  total= results.length;
-        const totalCompra = results.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
-        const promedioCompra = totalCompra / total; // Promedio de compra
-        const totalProductos = results.reduce((acc, curr) => acc + curr.cantidad, 0); // Total de productos comprados
-        const promedioProductosPorCompra = totalProductos / total; // Promedio de productos por compra
-        const primeraCompra = results[0].fecha; // Fecha de la primera compra (más antigua)
-        const ultimaCompra = results[results.length - 1].fecha; // Fecha de la última compra (más reciente)
 
 
-          res.status(200).json({
-            total,
-            totalCompra,
-            promedioCompra,
-            totalProductos,
-            promedioProductosPorCompra,
-            primeraCompra,
-            ultimaCompra})
-
-          
-        } catch (error) {
-          console.log(error)
-          return  res.status(500).json({error: 'Error interno del servidor'})
-
-
+  static getEstadisticasCompras = async (req,res)=>{
+    const {userId,startDate,endDate} = req.query
+    console.log(userId,startDate,endDate)
+      try {
+        const results = await  comprasModel.getEstadisticasCompras(userId,startDate,endDate)
+        
+        if(!results){
+          return res.status(404).json({error: 'Usuario no encontrado'})
         }
-      }
 
+      const  total= results.length;
+      const totalCompra = results.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
+      const promedioCompra = totalCompra / total; // Promedio de compra
+      const totalProductos = results.reduce((acc, curr) => acc + curr.cantidad, 0); // Total de productos comprados
+      const promedioProductosPorCompra = totalProductos / total; // Promedio de productos por compra
+      const primeraCompra = results[0].fecha; // Fecha de la primera compra (más antigua)
+      const ultimaCompra = results[results.length - 1].fecha; // Fecha de la última compra (más reciente)
+
+
+        res.status(200).json({
+          total,
+          totalCompra,
+          promedioCompra,
+          totalProductos,
+          promedioProductosPorCompra,
+          primeraCompra,
+          ultimaCompra})
+
+        
+      } catch (error) {
+        console.log(error)
+        return  res.status(500).json({error: 'Error interno del servidor'})
+
+
+      }
     }
+
+
+}
+
 
 export default comprasController;
