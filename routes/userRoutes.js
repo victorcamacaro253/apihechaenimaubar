@@ -48,7 +48,7 @@ router.get('/:id',userController.getUserById);
 
 
 //Ruta para insertar multiples usuarios
-router.post('/addMultipleUsers',userController.addMultipleUsers)
+router.post('/addMultipleUsers',upload.array('image'),userController.addMultipleUsers)
 
 //Ruta para eliminar multiple usuarios
 router.post('/deleteMultipleUsers',userController.deleteMultipleUsers)
