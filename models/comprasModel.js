@@ -200,7 +200,7 @@ const results = await query(SQL,[id,startDate, endDate]);
 return results;
 
 },
-    
+  
 async getEstadisticasCompras(userId, startDate, endDate) {
   let SQL = `SELECT 
               c.id_compra, 
