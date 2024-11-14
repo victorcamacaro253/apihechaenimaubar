@@ -27,7 +27,7 @@ const  UserModel = {
         try{
             const users = db.collection.find({}).toArray()
             return users
-        } catch(err){
+        } catch(error){
             console.error('Error retrieving users:', error)
             throw new Error('Error retrieving users')
         }
@@ -59,7 +59,7 @@ const  UserModel = {
     },
 
     async updateUser(id,updateFields){
-  const objectId = new  objectId(id);
+  const objectId = new  ObjectId(id);
   const result = await db.collection('usuario').updateOne(
     {_id: objectId},
     {$set: updateFields}
@@ -88,8 +88,8 @@ const  UserModel = {
      },
     
      async deleteUser(id){
-        const objectId = new objectId(id);
-        const result = await db.collection('usuario').deleteOne({_id: objectId});
+        const objectId = new ObjectId(id);
+        const result = await db.collection('usuario').deleteOne({_id: ObjectId});
         return result.deleteCount;
      },
 

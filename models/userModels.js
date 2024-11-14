@@ -201,12 +201,12 @@ async getUsersWithPagination(limit,offset){
 
     async addMultipleUser(users){
         const queries = users.map(user=>{
-            const {name,apellido,cedula,email,hashedPassword,imagePath} = user;
+            const {name,apellido,cedula,email,hashedPassword,rol,imagen} = user;
 
-            return _query('INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña,imagen) VALUES (?, ?, ?, ?, ?,?) ',
-                [name,apellido,cedula,email,hashedPassword,imagePath]
+            return _query('INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña,rol,imagen) VALUES (?, ?, ?, ?, ?,?,?) ',
+                [name,apellido,cedula,email,hashedPassword,rol,imagen]
             )
-        })
+        })  
 
         const result = await Promise.all(queries);
         return result
