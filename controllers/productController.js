@@ -2,6 +2,9 @@ import { query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una in
 import crypto from 'crypto'; // Importa crypto si lo necesitas
 import ProductModel from '../models/productModel.js';
 import categoriasModel from '../models/categoriasModel.js';
+import fs  from 'fs'; // Importa fs si lo necesitas
+import csvParser from 'csv-parser';
+
 
 class productController{
 
@@ -449,112 +452,56 @@ static updateProduct = async (req, res) => {
        }
 
 
-static importProducts  = async (req, res) => {
- const filePath = req.file.path
- const products = []
- 
- try {
-
-           // Leer el archivo CSV
-           const readStream = fs.createReadStream(filePath);
-           const parseStream = readStream.pipe(csvParser());
-   
-
-parseStream.on('data',(row)=>{
-    products.push({
-        codigo: row.codigo,
-        nombre_producto:row.nombre_producto,
-        descripcion: row.descripcion,
-
-        precio: parseFloat(row.precio),
-        stock: parseInt(row.stock),
-        id_categoria: parseInt(row.id_categoria),
-        activo:row.activo,
-        id_proveedor:parseInt(row.id_proveedor),
-        imagen:row.imagen
-
-    })
- })
-
- console.log(products)
-
- await new Promise ((resolve,reject)=>{
-    parseStream.on('end',resolve)
-    parseStream.on('error',reject)
- })
-
- const count=  await ProductModel.importProducts(products)
-
- fs.unlinkSync(filePath)
-
- return  res.json({message:'Productos Importados exitosamente',count})
-
-    
- } catch (error) {
-    console.error('Error al procesar el archivo o importar productos:', error);
-        
-    // Limpiar el archivo en caso de error
-    if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-    }
-
-    return res.status(500).json({message:'Error al importar productos',error:error.message})
-    
- }
-
-
-
-}
-
-
-static getProductsSoldByDateRange =  async (req, res) => {
-    const { startDate, endDate } = req.query;
-
-    // Verificar que las fechas sean proporcionadas
-    if (!startDate || !endDate) {
-        return res.status(400).json({ message: 'Se requieren startDate y endDate' });
-    }
+static importProduct = async  (req, res) => {
+    const filePath= req.file.path
+    const products= []
 
     try {
-        const productsSold = await ProductModel.getProductsSoldByDateRange(startDate, endDate);
-        
-   
-        // Calcular el ingreso total general sumando los ingresos de cada producto
-       /* const ingresoTotalGeneral = productsSold.reduce((total, product) => {
-            return total + parseFloat(product.total_ingresos );
-        }, 0);
+        const readStream= fs.createReadStream(filePath);
+        const parseStream = readStream.pipe(csvParser())
 
-        return res.json({
-            productos_mas_vendidos: productsSold,
-            ingreso_total_general: ingresoTotalGeneral
-        });*/
-    let ingresoTotalGeneral=0
-        for(const product of productsSold){
 
-            const ingresos = parseFloat(product.total_ingresos);
-            if(!isNaN(ingresos)){
-                ingresoTotalGeneral += ingresos;
-            }
-        }
-
-        return res.json({
-            productos_mas_vendidos: productsSold,
-            ingreso_total_general: ingresoTotalGeneral
+     parseStream.on('data',(row)=>{
+        products.push({
+            codigo: row.codigo,
+            nombre_producto: row.nombre_producto,
+            descripcion: row.descripcion,
+            precio: parseFloat(row.precio),
+            stock:parseInt(stock),
+            id_categoria: parseInt(id_categoria),
+            activo:row.activo,
+            id_proveedor: parseInt(row.id_proveedor),
+            imagen:row.imagen
         })
+     })
+
+     console.log(products)
+
+     await new Promise ((resolve,reject)=>{
+        parseStream.on('end',resolve)
+        parseStream.on('error',reject)
+     })
 
 
-        
+     const count = await  ProductModel.importProducts(products)
+
+     fs.unlinkSync(filePath)
+
+     return res.json({message:'Productos Importados Exitosamente',count})
+
+
     } catch (error) {
-        console.error('Error al obtener productos vendidos por rango de fechas:', error);
-        return  res.status(500).json({ message: 'Error al obtener productos vendidos', error: error})
-        
+        console.log('Error al procesar el archivo  o importar prodcutos',error)
+
+        if(fs.existsSync(filePath)){
+            fs.unlinkSync(filePath)
+        }
+        return  res.status(500).json({message:'Error al importar productos',error})
+
     }
 
-   
-}
-
 
 }
-
+}
 
 export default productController
