@@ -20,7 +20,12 @@ router.get('/permisos/:id',rolesPermisosController.getPermisosById)
 
 
 router.post('/permisos/', rolesPermisosController.createPermiso); // para crear un nuevo
+
 router.put('/:id', rolesPermisosController.updatePermiso); // para actualizar un existente
-router.delete('/:id', rolesPermisosController.deletePermiso); // para eliminar un exist
+
+
+router.delete('/:id', rolesPermisosController.deletePermiso); // para eliminar un permiso 
+
+
  export  default router;
 
