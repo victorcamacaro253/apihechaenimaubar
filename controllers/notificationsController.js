@@ -1,4 +1,4 @@
-import notificacionModel from '../models/notificationsModel.js';
+//import notificacionModel from '../models/notificationsModel.js';
 import notificationService from '../services/notificationService.js';
 
 class notificationsController{

@@ -65,6 +65,20 @@ async addMultipleProducts (connection, products) {
     return result;
 },
 
+
+async importProducts(products){
+  const queries = products.map((product) => {
+    const { codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagePath } = product;
+
+    return query('INSERT INTO productos (codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagen) VALUES (?,?,?,?,?,?,?,?,?)',
+        [codigo, nombre_producto, descripcion, precio, stock, id_categoria, activo, id_proveedor, imagePath || '']
+    )
+})
+
+const result = await Promise.all(queries);
+return result;
+},
+
 /*
 async filterProducts(filters){
 
@@ -91,9 +105,9 @@ async filterProducts(filters){
 }
 
 */
-filterProducts: async ({ category, minPrice, maxPrice }) => {
+async filterProducts ( category, minPrice, maxPrice ) {
     let queryl = 'SELECT * FROM productos INNER JOIN categorias ON productos.id_categoria=categorias.id_categoria WHERE 1=1';
-    const params = [];
+    const params = [];                      
   
     if (category) {
       queryl += ' AND categorias.categoria = ?';
@@ -110,9 +124,55 @@ filterProducts: async ({ category, minPrice, maxPrice }) => {
   
     const rows = await query(queryl, params);
     return rows;
-  }
+  },
 
   
+ async getTopSelling(){
+
+  let SQL = 'SELECT id_producto, nombre_producto, precio,vendido FROM productos ORDER BY vendido DESC';
+  const rows = await query(SQL);
+  return rows;
+
+ },
+
+ 
+async actualizarProductosMasVendidos(id,cantidad){
+  const SQL = ` Update  productos set vendido = vendido +  ? WHERE id_producto = ?`;
+  const results = await query(SQL,[cantidad,id]);
+  return results;
+},
+
+async getProductsSoldByDateRange (startDate,endDate){
+const SQL= `SELECT 
+
+        p.id_producto, 
+        p.nombre_producto,
+         p.precio AS precio_producto, 
+         SUM(pc.cantidad) AS total_vendido,
+          SUM(pc.cantidad * p.precio) AS total_ingresos 
+          FROM 
+          productos_compras pc 
+          JOIN 
+          compras c ON pc.id_compra = c.id_compra
+           JOIN 
+           usuario u ON c.id_usuario = u.id 
+           JOIN 
+           productos p ON pc.id_producto = p.id_producto
+            WHERE 
+            c.fecha BETWEEN ? AND ?
+             GROUP BY
+              p.id_producto, p.nombre_producto, p.precio 
+             ORDER 
+             BY total_vendido DESC;`
+
+             const result= await query(SQL,[startDate,endDate])
+
+             return result
+}
+
+
+
+
 };
 
 export default ProductModel;

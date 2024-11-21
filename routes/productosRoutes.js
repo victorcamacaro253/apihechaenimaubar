@@ -8,27 +8,41 @@ const router = Router()
 
 
 
-router.get('/Products',productController.getProducts)
+router.get('/',productController.getProducts)
 
-router.get('/Products/categoria/',productController.getProductsByCategoria)
+router.get('/categoria/',productController.getProductsByCategoria)
 
-router.get('/Products/price',productController.getProductsByPrinceRange)
+router.get('/price',productController.getProductsByPrinceRange)
 
-router.post('/Products/addMultipleProducts',upload.single('image'),productController.addMultipleProducts)
-
-router.get('/Products/meta', productController.getProductsMeta);
-
-router.get('/Products/filter',productController.filterProduct)
+//Ruta para obtener los productos filtrado por nombre
+router.get('/searchProductByName',productController.searchProductByName)
 
 
-router.get('/Products/:id',productController.getProductsById)
+router.post('/addMultipleProducts',upload.array('image'),productController.addMultipleProducts)
+
+router.get('/meta', productController.getProductsMeta);
+
+router.get('/filter',productController.filterProduct)
+
+router.get('/topSelling',productController.getTopSelling)
 
 
-router.post('/Products',upload.single('image'),productController.addProduct);
+//------------------------------------------------------------------
+router.get('/salesByDate', productController.getProductsSoldByDateRange);
 
-router.post('/Products/deleteMultipleProducts',productController.deleteMultipleProducts)
 
-router.delete('/Products/:id',productController.deleteProduct)
+//------------------------------------------------------------------
+
+router.get('/:id',productController.getProductsById)
+
+
+router.post('/',upload.single('image'),productController.addProduct);
+
+router.post('/deleteMultipleProducts',productController.deleteMultipleProducts)
+
+router.post('/import',upload.single('file'),productController.importProducts)
+
+router.delete('/:id',productController.deleteProduct)
 
 
 export default router ;

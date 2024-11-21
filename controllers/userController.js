@@ -6,6 +6,9 @@ const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes 
 import UserModel from '../models/userModels.js'
 import sendEmail from '../services/emailService.js';
 import tokenService from '../services/tokenService.js';
+import { error } from 'console';
+import { decode } from 'punycode';
+import { query } from 'express';
 
 class userController{
 
@@ -288,11 +291,20 @@ static loginUser = async (req, res) => {
         }
 
         // Generar un token JWT
-        const token = sign(
+     /*   const token = sign(
             { id: user.id, correo: user.correo },
             process.env.JWT_SECRET, // Asegúrate de tener JWT_SECRET en tus variables de entorno
             { expiresIn: '1h' } // Expiración del token, por ejemplo, 1 hora
         );
+*/
+       const token= tokenService.generateToken(user.id,user.correo,user.rol,'1h')
+       
+       const refreshToken = tokenService.generateToken(user.id,user.correo,user.rol,'7d')
+
+       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);  // Expira en 7 días
+
+       const saveRefreshToken = await tokenService.saveRefreshToken( user.id,refreshToken, expiresAt);
+
 
         // Generar un código aleatorio
         const randomCode = randomBytes(8).toString('hex'); // Genera un código aleatorio de 8 caracteres
@@ -304,7 +316,8 @@ static loginUser = async (req, res) => {
         // Devolver la respuesta con el token
         res.status(200).json({ 
             message: 'Inicio de sesión exitoso',
-            token
+            token,
+            refreshToken
         });
 
     } catch (err) {
@@ -313,6 +326,84 @@ static loginUser = async (req, res) => {
     }
 };
 
+static logoutUser = async (req,res)=>{
+    const refreshToken = req.cookies.refreshToken
+
+    if(!refreshToken){
+        return res.status(400).json({error:'No refresh token provided'})
+    }
+
+    try {
+        const decoded = tokenService.verifyToken(refreshToken)
+        if(!decoded){
+            return res.status(403).json({error:'Invalid or expired refresh token'})
+        }
+
+        const result= await tokenService.revocateToken(refreshToken)
+
+        if(result.length===0){
+            return res.status(404).json({error:'Refresh token not found'})
+        }
+        
+  // Eliminar la cookie del refresh token
+  res.clearCookie('refreshToken', {
+    httpOnly: true,  // Asegura que la cookie no pueda ser accesible por JavaScript
+    secure: process.env.NODE_ENV === 'production',  // Solo en producción si usas HTTPS
+    sameSite: 'Strict',  // Protege contra ataques CSRF
+});
+
+ // Responder con un mensaje de éxito
+ res.status(200).json({ message: 'Logout exitoso' });
+        
+    } catch (error) {
+        console.error('Error al ejecutar logout:', err);
+        res.status(500).json({ error: 'Error interno del servidor. Intenta de nuevo más tarde.' });
+    }
+}
+
+static async refreshToken(req, res) {
+    const refreshToken = req.cookies.refreshToken;  // Recuperamos el refresh token de la cookie
+
+    if (!refreshToken) {
+        return res.status(400).json({ error: 'No refresh token provided' });
+    }
+
+    try {
+        // Verificar y decodificar el refresh token
+        const decoded = TokenService.verifyToken(refreshToken);
+
+        if (!decoded) {
+            return res.status(403).json({ error: 'Invalid or expired refresh token' });
+        }
+
+        // Buscar el usuario con el id del refresh token decodificado
+        const user = await UserModel.findById(decoded.id);  // Ajusta esto según tu modelo
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Verificar si el refresh token está registrado y no ha sido revocado
+        const tokenRecord = await db.query(
+            'SELECT * FROM refresh_tokens WHERE refresh_token = $1 AND user_id = $2 AND revoked = FALSE',
+            [refreshToken, decoded.id]
+        );
+
+        if (tokenRecord.rowCount === 0) {
+            return res.status(403).json({ error: 'Invalid or revoked refresh token' });
+        }
+
+        // Generar un nuevo access token
+        const newAccessToken = TokenService.generateToken(user.id, user.correo, user.rol, '1h');  // Expiración de 1 hora
+
+        // Enviar el nuevo access token al cliente
+        res.status(200).json({ accessToken: newAccessToken });
+
+    } catch (err) {
+        console.error('Error refreshing token:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
 
 
 static getPerfil = async (req, res) => {
@@ -415,82 +506,79 @@ static getUsersWithPagination = async (req,res)=>{
 
 
 
-static addMultipleUsers= async (req,res)=>{
-  const { users } = req.body
-  const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null ;
 
-  console.log(users)
 
-  if(!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.users)){
-    return res.status(400).json({error:'Users must be an array'})
-  }
-
-  const errors= [];
-  const createdUsers = [];
-  
-   try {
-    
-  const usersToInsert = [];
-
-  for(const user of users){
-    const {
-        name,
-         apellido,
-          cedula,
-           email,
-            password
-    } = user
-
-    if (!name || !apellido || !email || !password) {
-        return res.status(400).json({ error: 'Nombre, apellido, correo y contraseña son requeridos' });
+static addMultipleUsers = async (req, res) => {
+    // Convierte users de string a objeto
+    let users;
+    try {
+        users = JSON.parse(req.body.users || '[]');
+    } catch (error) {
+        return res.status(400).json({ error: 'Invalid JSON format for users' });
     }
 
-    if (password.length < 7) {
-        return res.status(400).json({ error: 'La contraseña debe tener al menos 7 caracteres' });
+    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
+
+    console.log(users);
+
+    if (!Array.isArray(users)) {
+        return res.status(400).json({ error: 'Users must be an array' });
     }
 
-    const existingUser = await UserModel.existingCedula(cedula)
+    const errors = [];
+    const createdUsers = [];
 
-    if (existingUser.length > 0) {
-      
-       errors.push({error:'El usuario ya existe',name})
-       continue
+    try {
+        const usersToInsert = [];
+
+        for (const user of users) {
+            const { name, apellido, cedula, email, password } = user;
+
+            if (!name || !apellido || !email || !password) {
+                errors.push({ error: 'Nombre, apellido, correo y contraseña son requeridos', user });
+                continue; // Cambiado para seguir insertando otros usuarios
+            }
+
+            if (password.length < 7) {
+                errors.push({ error: 'La contraseña debe tener al menos 7 caracteres', user });
+                continue; // Cambiado para seguir insertando otros usuarios
+            }
+
+            const existingUser = await UserModel.existingCedula(cedula);
+
+            if (existingUser) {
+                errors.push({ error: 'El usuario ya existe', name });
+                continue; // Cambiado para seguir insertando otros usuarios
+            }
+
+            const hashedPassword = await hash(password, 10);
+
+            usersToInsert.push({
+                name,
+                apellido,
+                cedula,
+                email,
+                hashedPassword,
+                imagePath
+            });
+        }
+
+        if (usersToInsert.length > 0) {
+            // Llama a la función de inserción de múltiples usuarios en el modelo
+            const result = await UserModel.addMultipleUser(usersToInsert);
+            createdUsers.push(...usersToInsert.map(user => ({ name: user.name }))); // Solo agregar nombres
+        }
+
+        if (errors.length > 0) {
+            res.status(400).json({ errors });
+        } else {
+            res.status(201).json({ createdUsers });
+        }
+
+    } catch (error) {
+        console.error('Error ejecutando la consulta:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
-
-    const hashedPassword = await hash(password, 10);
-
-    usersToInsert.push({
-
-    name,
-    apellido,
-    cedula,
-    email,
-     hashedPassword
-    })
-  // Llamar a la función de inserción de múltiples productos en el modelo
-  const [result] = await UserModel.addMultipleUsers(usersToInsert);
-
-  createdUsers.push({ id: result.insertId, name });
-
-  }
-
-
-
-  
-  if (errors.length > 0) {
-    res.status(400).json({ errors });
-} else {
-    res.status(201).json({ createdUsers });
-}
-
-
-   } catch (error) {
-    console.error('Error ejecutando la consulta:', error);
-   
-    res.status(500).json({ error: 'Error interno del servidor' });
-   }
-
-
 }
 
 

@@ -1,8 +1,6 @@
 import { pool } from '../db/db1.js'; // Asegúrate de que 'pool' es una instancia de conexión que soporte promesas
 import comprasModel from '../models/comprasModel.js';
 import ProductModel from '../models/productModel.js';
-import httpHelpers from '../helpers/httpHelper.js';
-import UserModel from '../models/userModels.js';
 
 
 class comprasController{
@@ -178,10 +176,20 @@ res.json(result);
       const stock = await ProductModel.getProductStock(connection, id_producto);
       const newStock = stock - cantidad;
       await ProductModel.updateProductStock(connection, id_producto, newStock);
+
+
+    
     }
 
     // Confirmar la transacción
     await connection.commit();
+
+
+// Llamar a actualizarProductosMasVendidos fuera de la transacción
+for (const producto of insertProductos) {
+  const { id_producto, cantidad } = producto;
+  await ProductModel.actualizarProductosMasVendidos(id_producto, cantidad);
+}
 
     res.status(201).json({ id_compra, message: 'Compra realizada con éxito' });
 
@@ -198,20 +206,46 @@ res.json(result);
  static deleteCompra = async (req,res) => {
  const { id } = req.params;
 
+  // Iniciar transacción
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+
+
+
  try {
+
+const productosCompras = await comprasModel.getProductosCompra(id)
+console.log(productosCompras)
+
+const eliminarProcutosCompra= productosCompras.map(async (producto)=>{
+  const { id_producto, id_compra,cantidad } = producto;
+  const productosEncontrados = await comprasModel.deleteProductosCompras(id_compra)
+  if (productosEncontrados.length === 0) {
+    throw new Error('Producto no encontrado');
+    }
+
+})
+
+await Promise.all(eliminarProcutosCompra)
 
   const result = await comprasModel.deleteCompra(id);
 
   if(result.affectedRows==0){
+    await connection.rollback();
     return res.status(404).json(({message:'Compra no encontrada'}))
   }
 
+  await connection.commit();
   res.status(200).json({message:'compra eliminada exitosamente'})
   
- } catch (err) {
-  console.error('Error ejecutando la consulta',err)
-  res.status(500).json({erro:'Error interno del servidor'});
+ } catch (error) {
+  console.error('Error ejecutando la consulta',error)
+  // Hacer rollback en caso de error
+  await connection.rollback();
+  res.status(500).json({error:'Error interno del servidor'});
   
+ }finally{
+  connection.release();
  }
 }
 
@@ -447,6 +481,45 @@ res.json(result);
              console.error('Error obteniendo compras por fecha:', error);
              res.status(500).json({ error: 'Error interno del servidor' });
          }
+      }
+
+
+
+      static getEstadisticasCompras = async (req,res)=>{
+      const {userId,startDate,endDate} = req.query
+      console.log(userId,startDate,endDate)
+        try {
+          const results = await  comprasModel.getEstadisticasCompras(userId,startDate,endDate)
+          
+          if(!results){
+            return res.status(404).json({error: 'Usuario no encontrado'})
+          }
+
+        const  total= results.length;
+        const totalCompra = results.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
+        const promedioCompra = totalCompra / total; // Promedio de compra
+        const totalProductos = results.reduce((acc, curr) => acc + curr.cantidad, 0); // Total de productos comprados
+        const promedioProductosPorCompra = totalProductos / total; // Promedio de productos por compra
+        const primeraCompra = results[0].fecha; // Fecha de la primera compra (más antigua)
+        const ultimaCompra = results[results.length - 1].fecha; // Fecha de la última compra (más reciente)
+
+
+          res.status(200).json({
+            total,
+            totalCompra,
+            promedioCompra,
+            totalProductos,
+            promedioProductosPorCompra,
+            primeraCompra,
+            ultimaCompra})
+
+          
+        } catch (error) {
+          console.log(error)
+          return  res.status(500).json({error: 'Error interno del servidor'})
+
+
+        }
       }
 
     }

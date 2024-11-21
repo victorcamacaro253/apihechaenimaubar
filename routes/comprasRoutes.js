@@ -6,29 +6,43 @@ import userController from '../controllers/userController.js';
 
 const router = Router()
 
+//Ruta para obtener  todas las compras
 
-router.get('/compras',comprasController.getCompras);
+router.get('/',comprasController.getCompras);
 
-router.get('/compras/fecha', comprasController.getComprasByDate);
+//Ruta para obtener las compras dentro de un rango de fecha
 
-router.get('/compras/:id/userFecha',comprasController.getComprasByUserDate)
+router.get('/fecha', comprasController.getComprasByDate);
+
+//Ruta para  obtener las compras de un usuario por un rango de fecha
+
+router.get('/:id/userFecha',comprasController.getComprasByUserDate)
+
+//Ruta para  obtener las compras por usuario
+
+router.get('/user/name',comprasController.getComprasByusername)
+
+//Ruta para obtener estadisticas  de las compras en un rango de tiempo
+
+router.get('/stats',comprasController.getEstadisticasCompras )
+
+//Ruta para obtener  las compras de Id de usuario 
 
 
-router.get('/compras/user/name',comprasController.getComprasByusername)
+router.get('/user/:userId', comprasController.getComprasByUserId);
 
 
-router.get('/compras/user/:userId', comprasController.getComprasByUserId);
+ //Ruta para obtener una compra por id
 
+router.get('/:id',comprasController.getCompraById)
 
+//Ruta para agregar una compra 
 
-router.get('/compras/:id',comprasController.getCompraById)
+router.post('/',comprasController.compraProduct);
 
+//Ruta para eliminar  una compra
 
-
-router.post('/compras',comprasController.compraProduct);
-
-
-router.delete('/compras/:id',comprasController.deleteCompra);
+router.delete('/:id',comprasController.deleteCompra);
 
 
 export default router;

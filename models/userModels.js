@@ -37,7 +37,7 @@ const UserModel = {
     },
 
     async existingCedula(cedula) {
-        const results = await _query('SELECT * FROM usuario WHERE cedula = ?',[cedula]);
+        const [results] = await _query('SELECT * FROM usuario WHERE cedula = ?',[cedula]);
         return results;
     },
 
@@ -61,6 +61,19 @@ async updateUser(id, updateFields, values) {
     return results; // Retornar el resultado de la consulta
 },
 
+async addMultipleUser(users){
+    const queries = users.map(user=>{
+        const {name,apellido,cedula,email,hashedPassword,imagePath} = user;
+
+        return _query('INSERT INTO usuario (nombre, apellido, cedula, correo, contraseña,imagen) VALUES (?, ?, ?, ?, ?,?) ',
+            [name,apellido,cedula,email,hashedPassword,imagePath]
+        )
+    })
+
+    const result = await Promise.all(queries);
+    return result
+
+},
 
    // Modelo: searchUsers
 async searchUsers({ name, apellido, cedula }) {

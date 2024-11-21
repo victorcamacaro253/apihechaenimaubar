@@ -2,6 +2,10 @@ import { query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una in
 import crypto from 'crypto'; // Importa crypto si lo necesitas
 import ProductModel from '../models/productModel.js';
 import categoriasModel from '../models/categoriasModel.js';
+import  fs  from 'fs'; // Importa fs si lo necesitas
+import csvParser from 'csv-parser';
+import { parse, resolve } from 'path';
+
 
 class productController{
 
@@ -170,23 +174,33 @@ static getProductsByPrinceRange= async (req,res)=>{
 
 
 
+
 static addMultipleProducts = async (req, res) => {
-    const { products } = req.body;
+
+// Convierte users de string a objeto
+let products;
+try {
+    products = JSON.parse(req.body.products || '[]');
+} catch (error) {
+    return res.status(400).json({ error: 'Invalid JSON format for users' });
+}
+
+
     const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
 
     console.log(products)
 
-    if (!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.products)) {
-        return res.status(400).json({ error: 'Products must be an array' });
+    if (!Array.isArray(products)) {
+        return res.status(400).json({ error: 'products must be an array' });
     }
+
     const errors = [];
     const createdProducts = [];
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
     try {
-
-        const productsToInsert = []
+        const productsToInsert = [];
         for (const product of products) {
             const {
                 nombre_producto,
@@ -220,31 +234,31 @@ static addMultipleProducts = async (req, res) => {
 
             // Verificar si el producto ya existe
             const [existingProduct] = await ProductModel.existingProduct(connection, nombre_producto);
+            console.log('victor',existingProduct); // Add this line to see what is returned
+
             if (existingProduct.length > 0) {
-                errors.push({ error: 'El producto ya existe',nombre_producto });
+                errors.push({ error: 'El producto ya existe', nombre_producto });
                 continue;
             }
 
-          
-           //Preparar el producto para la insercion
-           productsToInsert.push({
-            codigo,
-            nombre_producto,
-            descripcion,
-            precio:precioNum,
-            stock:stockNum,
-            id_categoria,
-            activo,
-            id_proveedor,
-            imagePath : imagePath || ''
-           })
-
-
-            // Llamar a la función de inserción de múltiples productos en el modelo
-            const [result] = await ProductModel.addMultipleProducts(connection,productsToInsert);
-
-            createdProducts.push({ id: result.insertId, nombre_producto });
+            // Preparar el producto para la inserción
+            productsToInsert.push({
+                codigo,
+                nombre_producto,
+                descripcion,
+                precio: precioNum,
+                stock: stockNum,
+                id_categoria,
+                activo,
+                id_proveedor,
+                imagePath: imagePath || ''
+            });
         }
+
+        // Llamar a la función de inserción de múltiples productos en el modelo
+        const result = await ProductModel.addMultipleProducts(connection, productsToInsert);
+
+        createdProducts.push({ id: result.insertId });
 
         // Confirmar transacción
         await connection.commit();
@@ -263,7 +277,6 @@ static addMultipleProducts = async (req, res) => {
         connection.release(); // Liberar el connection pool
     }
 };
-
 
 static deleteMultipleProducts= async (req,res)=>{
     const { products } = req.body
@@ -302,7 +315,7 @@ static  getProductsMeta= async (req,res)=>{
     categorias:categories.map(category => category.categoria),
     priceRange: {
         min: Math.min(...products.map(product => product.precio)),
-        max: Math.min(...products.map(product => product.precio))
+        max: Math.max(...products.map(product => product.precio))
     },
     countByCategory: categories.reduce((acc,category)=>{
         acc[category.categoria] = products.filter(product => product.id_categoria === category.id_categoria).length;
@@ -319,6 +332,8 @@ static  getProductsMeta= async (req,res)=>{
   }
 
 }
+
+
 static filterProduct = async (req, res) => {
     try {
       const { category, minPrice, maxPrice } = req.query;
@@ -330,12 +345,154 @@ static filterProduct = async (req, res) => {
       res.status(500).json({ message: 'Error filtering products', error });
     }
   }
+    
+
+  static searchProductByName = async (req, res) => {
+    const { nombre_producto } = req.query;
+
+    if (!nombre_producto) {
+        return res.status(400).json({ error: 'El nombre del producto es requerido' });
+    }
+    console.log(nombre_producto)
+
+    try {
+        const result = await ProductModel.searchProductByName( nombre_producto );
+
+        if (result.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron productos' });
+        }
+       console.log(result);
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('Error ejecutando la consulta:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+static getTopSelling = async (req,res) =>{
+  
+  try{
+
+    const topSelling = await ProductModel.getTopSelling();
+    return res.json(topSelling);
+    
+  }catch(error){
+    console.error('Error ejecutando la consulta:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+
+
+  }
+
 }
 
 
 
+static importProducts  = async (req, res) => {
+ const filePath = req.file.path
+ const products = []
+ 
+ try {
+
+           // Leer el archivo CSV
+           const readStream = fs.createReadStream(filePath);
+           const parseStream = readStream.pipe(csvParser());
+   
+
+parseStream.on('data',(row)=>{
+    products.push({
+        codigo: row.codigo,
+        nombre_producto:row.nombre_producto,
+        descripcion: row.descripcion,
+
+        precio: parseFloat(row.precio),
+        stock: parseInt(row.stock),
+        id_categoria: parseInt(row.id_categoria),
+        activo:row.activo,
+        id_proveedor:parseInt(row.id_proveedor),
+        imagen:row.imagen
+
+    })
+ })
+
+ console.log(products)
+
+ await new Promise ((resolve,reject)=>{
+    parseStream.on('end',resolve)
+    parseStream.on('error',reject)
+ })
+
+ const count=  await ProductModel.importProducts(products)
+
+ fs.unlinkSync(filePath)
+
+ return  res.json({message:'Productos Importados exitosamente',count})
+
+    
+ } catch (error) {
+    console.error('Error al procesar el archivo o importar productos:', error);
+        
+    // Limpiar el archivo en caso de error
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+
+    return res.status(500).json({message:'Error al importar productos',error:error.message})
+    
+ }
 
 
+
+}   
+
+
+
+static getProductsSoldByDateRange =  async (req, res) => {
+    const { startDate, endDate } = req.query;
+
+    // Verificar que las fechas sean proporcionadas
+    if (!startDate || !endDate) {
+        return res.status(400).json({ message: 'Se requieren startDate y endDate' });
+    }
+
+    try {
+        const productsSold = await ProductModel.getProductsSoldByDateRange(startDate, endDate);
+        
+   
+        // Calcular el ingreso total general sumando los ingresos de cada producto
+       /* const ingresoTotalGeneral = productsSold.reduce((total, product) => {
+            return total + parseFloat(product.total_ingresos );
+        }, 0);
+
+        return res.json({
+            productos_mas_vendidos: productsSold,
+            ingreso_total_general: ingresoTotalGeneral
+        });*/
+    let ingresoTotalGeneral=0
+        for(const product of productsSold){
+
+            const ingresos = parseFloat(product.total_ingresos);
+            if(!isNaN(ingresos)){
+                ingresoTotalGeneral += ingresos;
+            }
+        }
+
+        return res.json({
+            productos_mas_vendidos: productsSold,
+            ingreso_total_general: ingresoTotalGeneral
+        })
+
+
+        
+    } catch (error) {
+        console.error('Error al obtener productos vendidos por rango de fechas:', error);
+        return  res.status(500).json({ message: 'Error al obtener productos vendidos', error: error})
+        
+    }
+
+   
+}
+
+}
 
 
 export default productController
