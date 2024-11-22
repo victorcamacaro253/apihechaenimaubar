@@ -1,4 +1,5 @@
-const jwt = require('jsonwebtoken');
+import pkg from 'jsonwebtoken';
+const { verify } = pkg;
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -6,7 +7,7 @@ const authenticateToken = (req, res, next) => {
 
     if (token == null) return res.status(401).json({ error: 'Token no proporcionado' });
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) return res.status(403).json({ error: 'Token no válido' });
 
         req.user = user; // Guardar los datos del usuario en la solicitud
@@ -14,4 +15,4 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-module.exports = authenticateToken;
+export default authenticateToken;
