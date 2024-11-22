@@ -16,7 +16,7 @@ import webhooksRoutes from './webhooksRoutes.js'
 const router = express.Router();
 
 // Rutas de autenticación
-router.use(authRoutes);
+router.use('/auth',authRoutes);
 
 // Rutas de usuarios
 router.use('/users', userRoutes);

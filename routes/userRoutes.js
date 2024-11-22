@@ -39,7 +39,7 @@ router.post('/',authenticateToken,userController.addUser);
 
 //Ruta para logearse
 
-router.post('/login', userController.loginUser);
+//router.post('/login', userController.loginUser);
 
 
 //Ruta para obetenr un usuario por id

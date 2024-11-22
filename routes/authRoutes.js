@@ -1,12 +1,23 @@
 import { Router } from 'express';
 import passport from 'passport'
+import authentication from '../controllers/authLoginControllers.js';
 
 const router = Router()
 
-router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.post('/login',authentication.loginUser)
+
+router.post('/logout',authentication.logoutUser)
+
+router.post('/refreshToken',authentication.refreshToken)
+
+//----------------------------------------------------------------------------------------------------------
+//Ruta para iniciar sesion con Google
+
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 
-router.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
+router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
     res.redirect('/profile');
   });
 
@@ -31,10 +42,10 @@ router.get('/logout', (req, res) => {
 
 
 // Ruta para iniciar la autenticación con Facebook
-router.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'] }));
+router.get('/facebook', passport.authenticate('facebook', { scope: ['email'] }));
 
 // Ruta de callback después de la autenticación
-router.get('/auth/facebook/callback', 
+router.get('/facebook/callback', 
   passport.authenticate('facebook', { failureRedirect: '/' }),
   (req, res) => {
     res.redirect('/profile');
@@ -44,10 +55,10 @@ router.get('/auth/facebook/callback',
 //-------------------------------------------------------------------------------------------------------------------------------
 
 // Ruta para iniciar sesión con GitHub
-router.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
 
 // Ruta de callback después de autenticarse con GitHub
-router.get('/auth/github/callback', 
+router.get('/github/callback', 
   passport.authenticate('github', { failureRedirect: '/' }),
   (req, res) => {
     // Redirige a la página de perfil o a donde desees después de la autenticación
@@ -60,10 +71,10 @@ router.get('/auth/github/callback',
 
  
 // Ruta para iniciar sesión con Twitter
-router.get('/auth/twitter', passport.authenticate('twitter'));
+router.get('/twitter', passport.authenticate('twitter'));
 
 // Ruta de callback de Twitter
-router.get('/auth/twitter/callback',
+router.get('/twitter/callback',
   passport.authenticate('twitter', { failureRedirect: '/' }),
   (req, res) => {
     // Redirige al usuario a su perfil o a donde necesites
