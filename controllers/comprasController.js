@@ -135,10 +135,7 @@ res.json(result);
     for (const producto of insertProductos) {
       const { id_producto, cantidad } = producto;
       const stock = await ProductModel.getProductStock(connection, id_producto);
-      console.log('stock',stock)
-      console.log('cantidad',cantidad)
       const newStock = stock - cantidad;
-      console.log('new stock',newStock)
       await ProductModel.updateProductStock(connection, id_producto, newStock);
     }
 
@@ -186,26 +183,44 @@ for (const producto of insertProductos) {
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------
+static deleteCompra = async (req, res) => {
+  const { id } = req.params;
 
- static deleteCompra = async (req,res) => {
- const { id } = req.params;
+  // Iniciar transacción
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
 
- try {
+  try {
+      // Obtener los productos de la compra
+      const productosCompras = await comprasModel.getProductosCompras(connection, id);
 
-  const result = await comprasModel.deleteCompra(id);
+      // Eliminar productos de la base de datos
+      for (const producto of productosCompras) {
+          const { id_producto } = producto; // Asegúrate de que estás usando el campo correcto
+          await comprasModel.deleteProductoCompra(connection, id_producto); // Cambia id_compra por id_producto
+      }
 
-  if(result.affectedRows==0){
-    return res.status(404).json(({message:'Compra no encontrada'}))
+      // Eliminar la compra de la base de datos
+      await comprasModel.deleteCompra(connection, id);
+      
+      // Confirmar la transacción
+      await connection.commit();
+      
+      res.status(200).json({ message: 'Compra eliminada con éxito' });
+  } catch (err) {
+      console.error('Error ejecutando la transacción:', err);
+      await connection.rollback(); // Deshacer la transacción en caso de error
+      res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+      // Liberar la conexión
+      connection.release();
   }
-
-  res.status(200).json({message:'compra eliminada exitosamente'})
-  
- } catch (error) {
-  console.error('Error ejecutando la consulta',error)
-  res.status(500).json({erro:'Error interno del servidor'});
-  
- }
 }
+
+
+
+
+//---------------------------------------------------------------------------------------------
 
  static getComprasByDate = async (req, res) => {
   const { startDate, endDate } = req.query; // Obtener fechas desde los parámetros de consulta

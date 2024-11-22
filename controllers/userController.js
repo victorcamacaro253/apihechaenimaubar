@@ -1,12 +1,14 @@
 import { query as _query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import { hash, compare } from 'bcrypt';
 import {randomBytes} from 'crypto';
-import pkg from 'jsonwebtoken';  // Importa el módulo completo
-const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
+//import pkg from 'jsonwebtoken';  // Importa el módulo completo
+//const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
 import UserModel from '../models/userModels.js'
 import sendEmail from '../services/emailService.js';
 import tokenService from '../services/tokenService.js';
 import redis from '../db/redis.js';
+import notificationService from '../services/notificationService.js';
+import handleError from '../utils/handleError.js';
 
 class userController{
 
@@ -26,9 +28,8 @@ static getAllUser = async (req, res) => {
         await redis.set('users',JSON.stringify(results),'EX',600)
 
         res.json(results);
-    } catch (err) {
-        console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor 1' });
+    } catch (error) {
+        handleError(res,error)    
     }
 };
 
@@ -101,12 +102,12 @@ static addUser = async (req, res) => {
 
         //await connection.commit();
         res.status(201).json({ id: result.insertId, name, email });
-    } catch (err) {
+    } catch (error) {
         console.error('Error ejecutando la consulta:', err);
         
       //  await connection.rollback();
-        res.status(500).json({ error: 'Error interno del servidor' });
-    } finally {
+      handleError(res,error)  
+      } finally {
       //  connection.release(); // Liberar la conexión después de usarla
     }
 };
@@ -166,10 +167,10 @@ static updateUser = async (req, res) => {
 
         res.status(200).json({ message: 'Usuario actualizado exitosamente' });
         
-    } catch (err) {
+    } catch (error) {
         console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
+        handleError(res,error)
+        }
 };
 
 // Eliminar un usuario por ID
@@ -177,17 +178,6 @@ static deleteUser = async (req, res) => {
     
     const { id } = req.params;
   
-      // Configurar encabezados CORS
-     /* res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type');
-  
-      // Manejar solicitudes OPTIONS para preflight
-      if (req.method === 'OPTIONS') {
-          return res.sendStatus(204);
-      }*/
-
-
     try {
         const result = await UserModel.deleteUser(id);
 
@@ -219,7 +209,7 @@ static partialUpdateUser = async (req, res) => {
 
     try {
         // Verificar si el usuario existe
-        const [userResults] = await _query('SELECT * FROM usuario WHERE id = ?', [id]);
+        const userResults = await UserModel.getUserById(id)
         if (userResults.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
@@ -236,6 +226,17 @@ static partialUpdateUser = async (req, res) => {
             updateFields.push('correo = ?');
             values.push(updates.email);
         }
+
+        if (updates.cedula) {
+            updateFields.push('correo = ?');
+            values.push(updates.cedula);
+        }
+
+        if (updates.apellido) {
+            updateFields.push('apellido = ?');
+            values.push(updates.apellido);
+        }
+
         if (updates.password) {
             const hashedPassword = await hash(updates.password, 10);
             updateFields.push('contraseña = ?');
@@ -249,9 +250,8 @@ static partialUpdateUser = async (req, res) => {
             return res.status(400).json({ error: 'No hay datos válidos para actualizar' });
         }
 
-        // Construir la consulta SQL
-        const query = `UPDATE usuario SET ${updateFields.join(', ')} WHERE id = ?`;
-        const [result] = await _query(query, values);
+        
+        const result = await UserModel.updatePartialUser(updateFields,values)
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -260,23 +260,14 @@ static partialUpdateUser = async (req, res) => {
         res.status(200).json({ message: 'Usuario actualizado parcialmente exitosamente' });
     } catch (err) {
         console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)    
     }
 };
 
 static searchUsers = async (req, res) => {
     const { name, apellido, cedula } = req.query; // Usa req.query para parámetros GET
 
-    // Configurar encabezado CORS
-    /*
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(204);
-    }
-        */
+    
 
     try {
         // Llamar a la función del modelo
@@ -284,25 +275,16 @@ static searchUsers = async (req, res) => {
 
         res.status(200).json({results});
         
-    } catch (err) {
-        console.error('Error ejecutando la consulta', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    } catch (error) {
+        console.error('Error ejecutando la consulta', error);
+        handleError(res,error)    
     }
 };
-
+/*
 static loginUser = async (req, res) => {
     const { email, password } = req.body;
 
-    // Configurar encabezados CORS
-    /*
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-  
-    // Manejar solicitudes OPTIONS para preflight
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(204);
-    }*/
+
 
     // Validación de entrada
     if (!email || !password) {
@@ -324,15 +306,9 @@ static loginUser = async (req, res) => {
             return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
 
-        /*Generar un token JWT
-        const token = sign(
-            { id: user.id, correo: user.correo },
-            process.env.JWT_SECRET, // Asegúrate de tener JWT_SECRET en tus variables de entorno
-            { expiresIn: '1h' } // Expiración del token, por ejemplo, 1 hora
-        );
-*/
+    
 
-    //  const token= tokenService.generateToken(user.id,user.correo,user.rol)
+      const token= tokenService.generateToken(user.id,user.correo,user.rol)
       
         // Generar un código aleatorio
         const randomCode = randomBytes(8).toString('hex'); // Genera un código aleatorio de 8 caracteres
@@ -340,6 +316,9 @@ static loginUser = async (req, res) => {
         // Insertar registro de inicio de sesión en la base de datos
         UserModel.insertLoginRecord( user.id, randomCode)
        
+         // Emitir una notificación a todos los usuarios conectados
+         const message = `${user.correo} ha iniciado sesión.`; // Personaliza el mensaje
+         notificationService.notifyClients(message); // Llama a la función de notificación
 
         // Devolver la respuesta con el token
         res.status(200).json({ 
@@ -347,12 +326,12 @@ static loginUser = async (req, res) => {
             token
         });
 
-    } catch (err) {
+    } catch (error) {
         console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor. Intenta de nuevo más tarde.' });
+        handleError(res,error)    
     }
 };
-
+*/
 
 
 static getPerfil = async (req, res) => {
@@ -373,9 +352,9 @@ static getPerfil = async (req, res) => {
         // Enviar el perfil del usuario como respuesta
         res.status(200).json(results);
 
-    } catch (err) {
-        console.error('Error obteniendo el perfil:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    } catch (error) {
+        console.error('Error obteniendo el perfil:', error);
+        handleError(res,error)    
     }
 };
 
@@ -401,9 +380,9 @@ const {id} = req.params;
         // Enviar el perfil del usuario como respuesta
         res.status(200).json(results);
 
-    } catch (err) {
-        console.error('Error obteniendo el perfil:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    } catch (error) {
+        console.error('Error obteniendo el perfil:', error);
+        handleError(res,error)    
     }
 
 }
@@ -430,7 +409,7 @@ static getLoginHistory = async (req,res)=>{
         res.json(result);
     } catch (error) {
         console.error('Error al obtener el historial de ingresos',error);
-        res.status(500).json({error:'Error interno del servidor',error})
+        handleError(res,error)    
     }
 }
 
@@ -445,7 +424,7 @@ static getUsersWithPagination = async (req,res)=>{
 
     } catch (error) {
         console.error('Error al obtener la paginacion',error)
-        res.status(500).json({Error:'Error interno del servidor',error})
+        handleError(res,error)    
     }
 }
 
@@ -455,14 +434,22 @@ static getUsersWithPagination = async (req,res)=>{
 
 static addMultipleUsers = async (req, res) => {
     // Convierte users de string a objeto
+    console.log('full body',req.body)
+    // Convierte users de string a objeto
     let users;
-    try {
-        users = JSON.parse(req.body.users || '[]');
-    } catch (error) {
-        return res.status(400).json({ error: 'Invalid JSON format for users' });
-    }
+    if (typeof req.body.users === 'string') {
+       // Convierte users de string a objeto si viene de form-data
+       try {
+           users = JSON.parse(req.body.users || '[]');
+       } catch (error) {
+           return res.status(400).json({ error: 'Invalid JSON format for users' });
+       }
+   } else {
+       // Si ya es un array (JSON puro)
+       users = req.body.users || [];
+   }
 
-    const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
+   // const imagePath = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null;
 
     console.log(users);
 
@@ -472,12 +459,13 @@ static addMultipleUsers = async (req, res) => {
 
     const errors = [];
     const createdUsers = [];
+    const usersToInsert = [];
+
 
     try {
-        const usersToInsert = [];
 
         for (const user of users) {
-            const { name, apellido, cedula, email, password } = user;
+            const { name, apellido, cedula, email, password,rol } = user;
 
             if (!name || !apellido || !email || !password) {
                 errors.push({ error: 'Nombre, apellido, correo y contraseña son requeridos', user });
@@ -496,6 +484,10 @@ static addMultipleUsers = async (req, res) => {
                 continue; // Cambiado para seguir insertando otros usuarios
             }
 
+            const imagePath = req.files[0] ? req.files[0].filename : null; // Solo el nombre del archivo
+
+            console.log(imagePath)
+
             const hashedPassword = await hash(password, 10);
 
             usersToInsert.push({
@@ -504,14 +496,15 @@ static addMultipleUsers = async (req, res) => {
                 cedula,
                 email,
                 hashedPassword,
-                imagePath
+                rol,
+                imagen:imagePath
             });
         }
 
         if (usersToInsert.length > 0) {
             // Llama a la función de inserción de múltiples usuarios en el modelo
             const result = await UserModel.addMultipleUser(usersToInsert);
-            createdUsers.push(...usersToInsert.map(user => ({ name: user.name }))); // Solo agregar nombres
+            createdUsers.push(...usersToInsert.map(user => ({ name: user.nombre }))); // Solo agregar nombres
         }
 
         if (errors.length > 0) {
@@ -522,7 +515,8 @@ static addMultipleUsers = async (req, res) => {
 
     } catch (error) {
         console.error('Error ejecutando la consulta:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)    
+
     }
 }
 
@@ -547,8 +541,8 @@ static deleteMultipleUsers= async (req,res)=>{
 
     
  } catch (error) {
-    res.status(500).json({ error: 'Error interno del servidor' },error);
- }
+    handleError(res,error)    
+}
 
 }
 /*
