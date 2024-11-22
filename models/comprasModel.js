@@ -69,12 +69,27 @@ async compraProduct(connection,id_compra, id_producto, cantidad, precio){
     await connection.query(query, [values]);
   },
 
-async deleteCompra(id){
 
-    const result = await query('DELETE FROM compras WHERE id_compra=?',[id])
+  async getProductosCompras (connection,id_compra){
+    const query = `SELECT p.nombre_producto, p.descripcion, p.precio, pc.cantidad
+    FROM productos_compras pc
+    JOIN productos p ON pc.id_producto = p.id_producto
+    WHERE pc.id_compra = ?`
+    const results = await connection.query(query, [id_compra]);
+    return results;
+    },
+
+async deleteCompra(connection,id){
+
+    const result = await connection.query('DELETE FROM compras WHERE id_compra=?',[id])
         return result;
     
 },
+
+async deleteProductoCompra(connection,id){
+  const result = await connection.query('DELETE FROM productos_compras WHERE id_producto=?',[id])
+    return result;
+    },
 
 async findByDateRange (startDate, endDate){
     const SQL = `

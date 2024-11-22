@@ -96,6 +96,13 @@ async updateUser(id, updateFields, values) {
     return results; // Retornar el resultado de la consulta
 },
 
+async updatePartialUser(updateFields,values){
+  // Construir la consulta SQL
+  const sql = `UPDATE usuario SET ${updateFields.join(', ')} WHERE id = ?`;
+  const result = await _query(sql, values);
+  return result
+},
+
 // Modelo: searchUsers
 async searchUsers({ name, apellido, cedula }) {
     // Construir la consulta SQL
@@ -174,9 +181,7 @@ async getLoginHistory(id){
 
 async getLoginHistory(nombre){
     try {
-        console.log(`Executing query: SELECT * FROM historial_ingresos INNER JOIN usuario ON historial_ingresos.id_usuario=usuario.id WHERE usuario.nombre=?`, [nombre]);
         const result = await _query('SELECT * FROM `historial_ingresos` INNER JOIN usuario ON historial_ingresos.id_usuario=usuario.id WHERE usuario.nombre=?', [nombre]);
-        console.log(`Query result:`, result);
         return result;
       } catch (error) {
         console.error('Error getting login history', error);
