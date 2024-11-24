@@ -1,6 +1,7 @@
 import express, { json } from 'express';
 import session from 'express-session';
 import limiter from './rateLimiter.js';
+import http from 'http';
 import helmet from 'helmet';
 import routes from './routes/index.js';  // Importa el archivo de rutas
 import cors from 'cors';
@@ -8,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import csrf from 'csurf';
 import passport from 'passport';
 import morgan from 'morgan';
+import { setupWebSocket } from './services/websocketServer.js'; // Importa la función para configurar WebSocket
 import authRoutes from './routes/authRoutes.js';  // Rutas de autenticación
 import './controllers/authControllers.js';  // Asegúrate de que se configure passport
 import './controllers/authFacebookControllers.js'
@@ -16,6 +18,14 @@ import './controllers/authTwitterControllers.js'
 
 
 const app = express();
+
+
+// Crear un servidor HTTP a partir de Express
+const server = http.createServer(app);
+
+// Configurar WebSocket
+setupWebSocket(server);
+
 
 
 // Configuración de la sesión
@@ -108,6 +118,6 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT ?? 3000
 
-app.listen(PORT, ()=>{
+server.listen(PORT, ()=>{
     console.log(`Server running on port ${PORT}`)
 })
