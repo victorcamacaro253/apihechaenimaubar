@@ -16,7 +16,7 @@ const  tokenModel = {
         return await query(sql, values)
           },
         
-          async verifyToken (refresh,id){
+          async verifyExistingToken (refresh,id){
             const sql = 'SELECT * FROM refresh_tokens WHERE token=? AND id_usuario=? AND revoked = FALSE'
             const result= await query(sql,[refresh,id])
             return result
