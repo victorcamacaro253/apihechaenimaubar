@@ -5,7 +5,7 @@ const checkPermissions = (requiredPermission) => {
     const roleId = req.user.rol;
 
     try {
-      const permisos = await rolesPermisosModel.getPermisosByrole(roleId);
+      const permisos = await rolesPermisosModel.getPermissionsByRole(roleId);
       console.log(`Permisos para el rol ${roleId}:`, permisos); // Verifica los permisos en consola
 
       if (!permisos || permisos.length === 0) {
