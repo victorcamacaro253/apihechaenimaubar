@@ -8,6 +8,15 @@ const comprasModel= {
         const result= await query('SELECT * FROM compras  INNER JOIN usuario ON compras.id_usuario=usuario.id')
         return result;
     },
+    async getTotalCompras(){
+      const result= await query('SELECT total_compra as Total FROM compras  INNER JOIN usuario ON compras.id_usuario=usuario.id')
+      return result;
+  },
+
+    async getUserCompras(id){
+      const result = await query('SELECT * FROM compras WHERE id_usuario= ?',[id])
+      return result
+    },
 
     async getComprasDetails(){
 
@@ -263,9 +272,15 @@ async getEstadisticasCompras(userId, startDate, endDate) {
     console.error('Error al obtener las estadísticas de compras:', error);
     throw error;  // Lanzamos el error para manejarlo donde se llama a la función.
   }
+},
+
+async getComprasCountByUsuario(){
+  const sql = `SELECT u.id, u.nombre, COUNT(c.id_compra) AS cantidad_compras
+   FROM usuario u LEFT JOIN compras c ON u.id = c.id_usuario  GROUP BY u.id, u.nombre;` 
+
+   const result = await query(sql)
+   return result
 }
-
-
 
 }
 export default comprasModel;
