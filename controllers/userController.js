@@ -1,14 +1,14 @@
 import { query as _query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import { hash, compare } from 'bcrypt';
-import {randomBytes} from 'crypto';
 //import pkg from 'jsonwebtoken';  // Importa el módulo completo
 //const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
 import UserModel from '../models/userModels.js'
-import sendEmail from '../services/emailService.js';
+import emailService from '../services/emailService.js';
 import tokenService from '../services/tokenService.js';
 import redis from '../db/redis.js';
 import notificationService from '../services/notificationService.js';
 import handleError from '../utils/handleError.js';
+
 
 class userController{
 
@@ -25,7 +25,7 @@ static getAllUser = async (req, res) => {
 
         const results = await UserModel.getAllUsers();
 
-        await redis.set('users',JSON.stringify(results),'EX',600)
+       await redis.set('users',JSON.stringify(results),'EX',600)
 
         res.json(results);
     } catch (error) {
@@ -622,9 +622,9 @@ static requestPasswordReset= async (req,res)=>{
     return res.status(404).send('Correo no encontrado')
   }
  
-  const token = tokenService.generateToken(user.id)
+  const token = tokenService.generateToken(user.id,user.correo,user.rol,'1h')
 
-  const emailSent = await sendEmail(email,'Password Reset',`You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
+  const emailSent = await emailService.sendEmail(email,'Password Reset',`You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
               `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
               `http://localhost:3001/resetPassword/${token}\n\n` +
               `If you did not request this, please ignore this email.\n`)

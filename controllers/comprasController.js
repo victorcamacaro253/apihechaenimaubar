@@ -462,7 +462,12 @@ static deleteCompra = async (req, res) => {
     try{
 
       const result= await comprasModel.getComprasCountByUsuario()
-      return  res.json(result)
+
+      if (!result) {
+        return res.status(404).json({ error: 'No se encontraron compras' });
+      }
+      
+      res.json(result)
 
    
     
@@ -484,19 +489,22 @@ static deleteCompra = async (req, res) => {
         if(!results){
           return res.status(404).json({error: 'Usuario no encontrado'})
         }
+        const compras= await comprasModel.getCompras()
 
-      const  total= results.length;
-      const totalCompra = results.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
-      const promedioCompra = totalCompra / total; // Promedio de compra
+console.log(compras)
+
+      const  total_compras_realizadas= compras.length;
+      const  total_Gastado_en_Compras = compras.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
+      const promedioCompra = total_Gastado_en_Compras / total_compras_realizadas; // Promedio de compra
       const totalProductos = results.reduce((acc, curr) => acc + curr.cantidad, 0); // Total de productos comprados
-      const promedioProductosPorCompra = totalProductos / total; // Promedio de productos por compra
+      const promedioProductosPorCompra = totalProductos / total_compras_realizadas; // Promedio de productos por compra
       const primeraCompra = results[0].fecha; // Fecha de la primera compra (más antigua)
       const ultimaCompra = results[results.length - 1].fecha; // Fecha de la última compra (más reciente)
 
 
         res.status(200).json({
-          total,
-          totalCompra,
+          total_compras_realizadas,
+          total_Gastado_en_Compras,
           promedioCompra,
           totalProductos,
           promedioProductosPorCompra,
