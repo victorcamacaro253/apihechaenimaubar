@@ -2,6 +2,9 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import UserModel from '../models/userModels.js';
 import { query as _query,pool } from '../db/db1.js';
+import dotenv from 'dotenv';
+
+dotenv.config(); // Asegúrate de instalar dotenv con `npm install dotenv`
 
 
 passport.use(new GoogleStrategy({

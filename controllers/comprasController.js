@@ -495,7 +495,7 @@ console.log(compras)
 
       const  total_compras_realizadas= compras.length;
       const  total_Gastado_en_Compras = compras.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
-      const promedioCompra = total_Gastado_en_Compras / total_compras_realizadas; // Promedio de compra
+      const promedio_de_Compra = total_Gastado_en_Compras / total_compras_realizadas; // Promedio de compra
       const totalProductos = results.reduce((acc, curr) => acc + curr.cantidad, 0); // Total de productos comprados
       const promedioProductosPorCompra = totalProductos / total_compras_realizadas; // Promedio de productos por compra
       const primeraCompra = results[0].fecha; // Fecha de la primera compra (más antigua)
@@ -505,7 +505,7 @@ console.log(compras)
         res.status(200).json({
           total_compras_realizadas,
           total_Gastado_en_Compras,
-          promedioCompra,
+          promedio_de_Compra,
           totalProductos,
           promedioProductosPorCompra,
           primeraCompra,

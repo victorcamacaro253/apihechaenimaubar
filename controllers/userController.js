@@ -1,7 +1,5 @@
 import { query as _query, pool } from '../db/db1.js'; // Asegúrate de que 'db' sea una instancia de conexión que soporte promesas
 import { hash, compare } from 'bcrypt';
-//import pkg from 'jsonwebtoken';  // Importa el módulo completo
-//const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes } from 'crypto';
 import UserModel from '../models/userModels.js'
 import emailService from '../services/emailService.js';
 import tokenService from '../services/tokenService.js';
