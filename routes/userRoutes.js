@@ -3,20 +3,21 @@ import userController from '../controllers/userController.js';
 import authenticateToken from '../middleware/authenticationToken.js';
 import upload from '../middleware/multerConfig.js';
 import checkPermissions from '../middleware/checkPermission.js';
+import validateApiKey from '../middleware/validateApyKey.js';
 
 const router = Router();
 
-//Ruta para obtener los datos de la base de datos
+//Rutas para obtener los datos de la base de datos
 
 //Ruta para obtener todos los usuarios de la base de datos
 router.get('/',userController.getAllUser);
 
 
 //Ruta para obtener los usuarios filtrados
-router.get('/searchUser',userController.searchUsers);
+router.get('/searchUser',validateApiKey,userController.searchUsers);
 
 //Ruta para obtener el perfi de los usuarios
-router.get('/getperfil',authenticateToken,checkPermissions('read') ,userController.getPerfil)
+router.get('/getperfil',authenticateToken,authenticateToken,checkPermissions('read') ,userController.getPerfil)
 
 
 
@@ -36,10 +37,6 @@ router.get('/pagination',userController.getUsersWithPagination)
 //Ruta para agregar un nuevo usuario
 
 router.post('/',authenticateToken,userController.addUser);
-
-//Ruta para logearse
-
-//router.post('/login', userController.loginUser);
 
 
 //Ruta para obetenr un usuario por id

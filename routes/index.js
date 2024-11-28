@@ -9,7 +9,7 @@ import rolesPermisosRoutes from './rolesPermisosRoutes.js'
 import notificationsRoutes from  './notificationsRoutes.js'
 import notificationsUserRoutes from  './notificationUserRoutes.js'
 import webhooksRoutes from './webhooksRoutes.js'
-
+import apiKeyRoutes from './apiKeyRoutes.js'
 
 
 
@@ -45,6 +45,6 @@ router.use('/userNotifications',notificationsUserRoutes)
 
 router.use('/webhook',webhooksRoutes)
 
-
+router.use('/apiKey',apiKeyRoutes)
 
 export default router;

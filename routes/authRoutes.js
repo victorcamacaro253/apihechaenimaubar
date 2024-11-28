@@ -2,7 +2,40 @@ import { Router } from 'express';
 import passport from 'passport'
 import authentication from '../controllers/authLoginControllers.js';
 
+
 const router = Router()
+
+//No funciona bien,pendiente por acomodar
+router.get('/login', passport.authenticate('openidconnect'))
+
+router.get('/auth/google/callback', (req, res, next) => {
+  passport.authenticate('openidconnect', (err, user, info) => {
+      if (err) {
+          console.error('Error en la autenticación:', err);
+          return res.status(500).json({ error: 'Error en la autenticación', details: err });
+      }
+      if (!user) {
+          console.error('No se recibió usuario:', info);
+          return res.status(401).json({ error: 'No autorizado' });
+      }
+
+      res.status(200).json({
+          message: 'Autenticación exitosa',
+          user: user.profile,
+          tokens: {
+              accessToken: user.accessToken,
+              refreshToken: user.refreshToken,
+          },
+      });
+  })(req, res, next);
+});
+
+//router.get('fail',authOpenIdController.fail)
+
+//router.get('/logout',authOpenIdController.logout)  
+
+
+//-------------------------------------------------------------------------------------------------------------
 
 
 router.post('/login',authentication.loginUser)

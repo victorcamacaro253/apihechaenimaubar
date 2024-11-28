@@ -10,7 +10,7 @@ const router = Router();
 router.get('/',comprasController.getCompras);
 
 //Ruta para obtener las compras de un usuario por su nombre
-router.get('/SearchUserCompras/',comprasController.getComprasCountByUsuario)
+router.get('/SearchUserCompras/',comprasController.getComprasByusername)
 
 //Rutas para obtener las comprar por fecha
 router.get('/fecha', comprasController.getComprasByDate);
