@@ -15,6 +15,7 @@ import './controllers/authControllers.js';  // Asegúrate de que se configure pa
 import './controllers/authFacebookControllers.js'
 import './controllers/authGithubControllers.js'
 import './controllers/authTwitterControllers.js'
+import './controllers/openIDConnect.js'
 
 
 const app = express();
