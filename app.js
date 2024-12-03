@@ -1,6 +1,6 @@
 import express, { json } from 'express';
 import session from 'express-session';
-import limiter from './rateLimiter.js';
+import limiter from './middleware/rateLimiter.js';
 import http from 'http';
 import helmet from 'helmet';
 import routes from './routes/index.js';  // Importa el archivo de rutas
