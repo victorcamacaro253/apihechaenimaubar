@@ -196,8 +196,10 @@ static deleteCompra = async (req, res) => {
 
       // Eliminar productos de la base de datos
       for (const producto of productosCompras) {
-          const { id_producto } = producto; // Asegúrate de que estás usando el campo correcto
-          await comprasModel.deleteProductoCompra(connection, id_producto); // Cambia id_compra por id_producto
+          const { id_producto,id_compra } = producto; // Asegúrate de que estás usando el campo correcto
+         // await comprasModel.deleteProductoCompra(connection, id_producto); // Cambia id_compra por id_producto
+         await comprasModel.deleteProductoCompra(connection, id_compra); 
+
       }
 
       // Eliminar la compra de la base de datos
