@@ -6,9 +6,7 @@ const { sign } = pkg;  // Desestructura la propiedad 'sign'import { randomBytes 
 import UserModel from '../models/userModels.js'
 import sendEmail from '../services/emailService.js';
 import tokenService from '../services/tokenService.js';
-import { error } from 'console';
-import { decode } from 'punycode';
-import { query } from 'express';
+import tokenModel from '../models/tokenModel.js';
 
 class userController{
 
@@ -303,7 +301,15 @@ static loginUser = async (req, res) => {
 
        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);  // Expira en 7 días
 
-       const saveRefreshToken = await tokenService.saveRefreshToken( user.id,refreshToken, expiresAt);
+       const saveRefreshToken = await tokenModel.saveRefreshToken( user.id,refreshToken, expiresAt);
+
+           // Configurar el refresh token como una cookie
+           res.cookie('refreshToken', refreshToken, {
+            httpOnly: true, // No accesible por JavaScript en el navegador
+            secure: process.env.NODE_ENV === 'production', // Solo en producción
+            sameSite: 'Strict', // Protección contra CSRF
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días en milisegundos
+        });
 
 
         // Generar un código aleatorio
@@ -320,8 +326,8 @@ static loginUser = async (req, res) => {
             refreshToken
         });
 
-    } catch (err) {
-        console.error('Error ejecutando la consulta:', err);
+    } catch (error) {
+        console.error('Error ejecutando la consulta:', error);
         res.status(500).json({ error: 'Error interno del servidor. Intenta de nuevo más tarde.' });
     }
 };
@@ -339,7 +345,7 @@ static logoutUser = async (req,res)=>{
             return res.status(403).json({error:'Invalid or expired refresh token'})
         }
 
-        const result= await tokenService.revocateToken(refreshToken)
+        const result= await tokenModel.revocateToken(refreshToken)
 
         if(result.length===0){
             return res.status(404).json({error:'Refresh token not found'})
@@ -394,7 +400,7 @@ static async refreshToken(req, res) {
         }
 
         // Generar un nuevo access token
-        const newAccessToken = TokenService.generateToken(user.id, user.correo, user.rol, '1h');  // Expiración de 1 hora
+        const newAccessToken = tokenService.generateToken(user.id, user.correo, user.rol, '1h');  // Expiración de 1 hora
 
         // Enviar el nuevo access token al cliente
         res.status(200).json({ accessToken: newAccessToken });
@@ -492,10 +498,15 @@ static getLoginHistory = async (req,res)=>{
 
 static getUsersWithPagination = async (req,res)=>{
     const {page= 1,limit=10}= req.query
-    const offset= (page - 1 ) * limit;
+// Convertir page y limit a números enteros
+const pagel = parseInt(page, 10);   // Asegurarse de que 'page' sea un número entero
+const limitl = parseInt(limit, 10); // Asegurarse de que 'limit' sea un número entero
+
+
+    const offset= (pagel - 1 ) * limitl;
     
     try {
-        const result = await UserModel.getUsersWithPagination(limit,offset);
+        const result = await UserModel.getUsersWithPagination(limitl,offset);
         res.status(200).json(result)
 
     } catch (error) {
