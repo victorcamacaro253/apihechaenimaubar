@@ -15,7 +15,7 @@ router.get('/categoria/',productController.getProductsByCategoria)
 router.get('/price',productController.getProductsByPrinceRange)
 
 //Ruta para obtener los productos filtrado por nombre
-router.get('/searchProductByName',productController.searchProductByName)
+router.get('/name',productController.getProductByName)
 
 
 router.post('/addMultipleProducts',upload.array('image'),productController.addMultipleProducts)
