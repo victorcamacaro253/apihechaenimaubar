@@ -10,41 +10,51 @@ import notificationsRoutes from  './notificationsRoutes.js'
 import notificationsUserRoutes from  './notificationUserRoutes.js'
 import webhooksRoutes from './webhooksRoutes.js'
 import apiKeyRoutes from './apiKeyRoutes.js'
-
+import notFoundAndErrorHandler from '../middleware/routeNotFound.js'
+import cookieParser from 'cookie-parser';
+import csrf from '../middleware/csrfToken.js'
 
 
 const router = express.Router();
 
+router.use(cookieParser())
+
+router.get('/csrftoken',csrf.setCsrfToken)
+
 // Rutas de autenticación
-router.use('/auth',authRoutes);
+router.use('/v1/auth',authRoutes);
 
 // Rutas de usuarios
-router.use('/users', userRoutes);
+router.use('/v1/users', userRoutes);
 
 // Rutas de productos
-router.use('/products', productsRoutes);
+router.use('/v1/products', productsRoutes);
 
 // Rutas de compras
-router.use('/compras', comprasRoutes);
+router.use('/v1/compras', csrf.csrfMiddleware,comprasRoutes);
 
 // Rutas para exportar documentos
-router.use('/export', exportRoutes);
+router.use('/v1/export', exportRoutes);
 
 //Rutas para manejar los pagos
-router.use('/payment', paymentRoutes);
+router.use('/v1/payment', paymentRoutes);
 
 
 //Rutas para manejar los permisos y roles
-router.use('/rolesPermisos',rolesPermisosRoutes)
+router.use('/v1/rolesPermisos',rolesPermisosRoutes)
 
 //Rutas para manejar las notificaciones
-router.use('/notifications',notificationsRoutes)
+router.use('/v1/notifications',notificationsRoutes)
 
 //Rutas para manejar las notificaciones de usuarios
-router.use('/userNotifications',notificationsUserRoutes)
+router.use('/v1/userNotifications',notificationsUserRoutes)
 
-router.use('/webhook',webhooksRoutes)
+router.use('/v1/webhook',webhooksRoutes)
 
-router.use('/apiKey',apiKeyRoutes)
+router.use('/v1/apiKey',apiKeyRoutes)
+
+router.use(notFoundAndErrorHandler.routeNotFound)
+
+router.use(notFoundAndErrorHandler.serverError)
 
 export default router;
