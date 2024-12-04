@@ -99,6 +99,9 @@ async deleteProductoCompra(connection,id){
   const result = await connection.query('DELETE FROM productos_compras WHERE id_producto=?',[id])
     return result;
     },
+    async deleteProductoCompra2(connection,id){
+      const result = await connection.query('DELETE FROM productos_compras WHERE id_compra=?',[id])
+    },
 
 async findByDateRange (startDate, endDate){
     const SQL = `
