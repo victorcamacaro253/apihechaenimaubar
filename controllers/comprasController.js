@@ -1,19 +1,26 @@
 import { pool } from '../db/db1.js'; // Asegúrate de que 'pool' es una instancia de conexión que soporte promesas
 import comprasModel from '../models/comprasModel.js';
 import ProductModel from '../models/productModel.js';
+import UserModel from '../models/userModels.js';
+//import comprasModel from '../models/firebase/comprasModel_firebase.js';
+import fetch  from 'node-fetch'; // Importa la función fetch de node-fetch
+import notificationService from '../services/notificationService.js';
 
 
 class comprasController{
 
- static getCompras = async (req, res) => {
+
+static getCompras = async (req, res) => {
   try {
     const result = await comprasModel.getComprasDetails();
 
-    const compraAgrupada = result.reduce((acc, row) => {
+    const compraAgrupada = new Map();
+
+    for (const row of result) {
       const { id_compra, fecha, total_compra, id_usuario, nombre, apellido, cedula, correo, id_producto, nombre_producto, cantidad, precio } = row;
 
-      if (!acc[id_compra]) {
-        acc[id_compra] = {
+      if (!compraAgrupada.has(id_compra)) {
+        compraAgrupada.set(id_compra, {
           id_compra,
           fecha,
           total: total_compra,
@@ -25,30 +32,27 @@ class comprasController{
             correo,
           },
           productos: [],
-        };
+        });
       }
 
-      acc[id_compra].productos.push({
+      compraAgrupada.get(id_compra).productos.push({
         id_producto,
         nombre: nombre_producto,
         cantidad,
         precio,
       });
+    }
 
-      return acc;
-    }, {});
-
-    return res.json(Object.values(compraAgrupada));
+    // Convertir a array y enviar como respuesta
+    return res.json([...compraAgrupada.values()]);
   } catch (error) {
     console.error('Error ejecutando la consulta', error);
     return res.status(500).json({
       error: 'Error interno del servidor',
-      details: error.message, // Incluye detalles del error si es seguro hacerlo
+      details: error.message,
     });
   }
 };
-
-
 
 
 
@@ -75,54 +79,9 @@ res.json(result);
  }
  }
 
-/*
-  const compraProduct= async (req,res)=>{
 
-  const {id_producto,cantidad,id_usuario} =req.body
-
-   if (!id_producto || !cantidad || !id_usuario) {
-    return res.status(400).json({ error: 'Todos los campos son requeridos' });
-   }
-
-   const cantidadNum = parseInt(cantidad, 10);
-
-   if (isNaN(cantidadNum) || cantidadNum <= 0) {
-    return res.status(400).json({ error: 'La cantidad debe ser un número entero positivo' });
-   }
-
-  // Iniciar transacción
-   const connection = await pool.getConnection();
-   await connection.beginTransaction();
-
-   try { 
-    
-    const stock = await ProductModel.getProductStock(connection, id_producto);
-
-    if(stock< cantidadNum){
-        await connection.rollback(); // Deshacer la transacción
-        return res.status(400).json({ error: 'Stock insuficiente' });
-    }
-
-    const addCompra = comprasModel.addCompra(connection,id_producto,cantidadNum,id_usuario)
-
-    const newStock =stock - cantidadNum;
-    await ProductModel.updateProductStock(connection,id_producto,newStock);
-
-    await connection.commit();
-
-    res.status(201).json({ id_compra: addCompra.insertId, message: 'Compra realizada con éxito' });
-
-
-  } catch (err) {
-    console.error('Error ejecutando la transacción:', err);
-    await connection.rollback(); // Deshacer la transacción en caso de error
-    res.status(500).json({ error: 'Error interno del servidor' });    
-  }
-
-
-  
-}
-  */
+//funcion para ingresar producto,se podria usar un procedimiento almacenado para manejar las dos inserciones que se hacen pero como mi
+// version no es comptable con JSON_TABLE no se puede
 
 
  static compraProduct = async (req, res) => {
@@ -140,6 +99,7 @@ res.json(result);
       return res.status(400).json({ error: 'Datos de producto inválidos' });
     }
     totalCompra += cantidad * precio; // Sumar al total
+    
   }
 
   // Iniciar transacción
@@ -165,10 +125,11 @@ res.json(result);
     const id_compra = await comprasModel.addCompra(connection, id_usuario,totalCompra);
 
 
-    console.log(id_compra)
+    
 
     // Insertar productos en la compra
     await comprasModel.compraProduct(connection, id_compra, insertProductos);
+
 
     // Actualizar el stock del producto
     for (const producto of insertProductos) {
@@ -176,20 +137,36 @@ res.json(result);
       const stock = await ProductModel.getProductStock(connection, id_producto);
       const newStock = stock - cantidad;
       await ProductModel.updateProductStock(connection, id_producto, newStock);
-
-
-    
     }
 
     // Confirmar la transacción
     await connection.commit();
+/*
+    // Notificar al webhook usando fetch
+    await fetch('http://localhost:3000/webhook/compra', {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+          id_compra,
+          id_usuario,
+          totalCompra,
+          productos,
+      }),
+  });
+
+*/
 
 
-// Llamar a actualizarProductosMasVendidos fuera de la transacción
+   // Llamar a actualizarProductosMasVendidos fuera de la transacción
 for (const producto of insertProductos) {
   const { id_producto, cantidad } = producto;
-  await ProductModel.actualizarProductosMasVendidos(id_producto, cantidad);
+  await ProductModel.updateTopSelling(id_producto, cantidad);
 }
+
+ notificationService.notifyClients(`Notificación de compra recibida: ${id_compra}, Usuario: ${id_usuario}, Total: ${totalCompra}`)
+
 
     res.status(201).json({ id_compra, message: 'Compra realizada con éxito' });
 
@@ -203,51 +180,49 @@ for (const producto of insertProductos) {
   }
 };
 
- static deleteCompra = async (req,res) => {
- const { id } = req.params;
+
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+static deleteCompra = async (req, res) => {
+  const { id } = req.params;
 
   // Iniciar transacción
   const connection = await pool.getConnection();
   await connection.beginTransaction();
 
+  try {
+      // Obtener los productos de la compra
+      const productosCompras = await comprasModel.getProductosCompras(connection, id);
 
+      // Eliminar productos de la base de datos
+      for (const producto of productosCompras) {
+          const { id_producto,id_compra } = producto; // Asegúrate de que estás usando el campo correcto
+         // await comprasModel.deleteProductoCompra(connection, id_producto); // Cambia id_compra por id_producto
+         await comprasModel.deleteProductoCompra(connection, id_compra); 
 
- try {
+      }
 
-const productosCompras = await comprasModel.getProductosCompra(id)
-console.log(productosCompras)
-
-const eliminarProcutosCompra= productosCompras.map(async (producto)=>{
-  const { id_producto, id_compra,cantidad } = producto;
-  const productosEncontrados = await comprasModel.deleteProductosCompras(id_compra)
-  if (productosEncontrados.length === 0) {
-    throw new Error('Producto no encontrado');
-    }
-
-})
-
-await Promise.all(eliminarProcutosCompra)
-
-  const result = await comprasModel.deleteCompra(id);
-
-  if(result.affectedRows==0){
-    await connection.rollback();
-    return res.status(404).json(({message:'Compra no encontrada'}))
+      // Eliminar la compra de la base de datos
+      await comprasModel.deleteCompra(connection, id);
+      
+      // Confirmar la transacción
+      await connection.commit();
+      
+      res.status(200).json({ message: 'Compra eliminada con éxito' });
+  } catch (err) {
+      console.error('Error ejecutando la transacción:', err);
+      await connection.rollback(); // Deshacer la transacción en caso de error
+      res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+      // Liberar la conexión
+      connection.release();
   }
-
-  await connection.commit();
-  res.status(200).json({message:'compra eliminada exitosamente'})
-  
- } catch (error) {
-  console.error('Error ejecutando la consulta',error)
-  // Hacer rollback en caso de error
-  await connection.rollback();
-  res.status(500).json({error:'Error interno del servidor'});
-  
- }finally{
-  connection.release();
- }
 }
+
+
+
+
+//---------------------------------------------------------------------------------------------
 
  static getComprasByDate = async (req, res) => {
   const { startDate, endDate } = req.query; // Obtener fechas desde los parámetros de consulta
@@ -312,17 +287,17 @@ await Promise.all(eliminarProcutosCompra)
 
 
  static getComprasByUserId = async (req, res) => {
-  const { userId } = req.params;
-  console.log(userId);
+  const { id } = req.params;
+  console.log(id);
 
-  if (!userId) {
+  if (!id) {
     return res.status(400).json({ error: 'No se proporcionó un Id' });
   }
 
   try {
-    const result = await comprasModel.getComprasByUserId(userId);
+    const result = await comprasModel.getComprasByUserId(id);
     if (!result.length) {  // Cambiar para verificar si hay resultados
-      return res.status(400).json({ error: 'No se encontraron compras para el id proporcionado' });
+      return res.status(400).json({ error: `No se encontraron compras para el id ${id} proporcionado` });
     }
 
     // Procesar los resultados
@@ -484,44 +459,71 @@ await Promise.all(eliminarProcutosCompra)
       }
 
 
+  static getComprasCountByUsuario= async  (req, res) => {
 
-      static getEstadisticasCompras = async (req,res)=>{
-      const {userId,startDate,endDate} = req.query
-      console.log(userId,startDate,endDate)
-        try {
-          const results = await  comprasModel.getEstadisticasCompras(userId,startDate,endDate)
-          
-          if(!results){
-            return res.status(404).json({error: 'Usuario no encontrado'})
-          }
+    try{
 
-        const  total= results.length;
-        const totalCompra = results.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
-        const promedioCompra = totalCompra / total; // Promedio de compra
-        const totalProductos = results.reduce((acc, curr) => acc + curr.cantidad, 0); // Total de productos comprados
-        const promedioProductosPorCompra = totalProductos / total; // Promedio de productos por compra
-        const primeraCompra = results[0].fecha; // Fecha de la primera compra (más antigua)
-        const ultimaCompra = results[results.length - 1].fecha; // Fecha de la última compra (más reciente)
+      const result= await comprasModel.getComprasCountByUsuario()
 
-
-          res.status(200).json({
-            total,
-            totalCompra,
-            promedioCompra,
-            totalProductos,
-            promedioProductosPorCompra,
-            primeraCompra,
-            ultimaCompra})
-
-          
-        } catch (error) {
-          console.log(error)
-          return  res.status(500).json({error: 'Error interno del servidor'})
-
-
-        }
+      if (!result) {
+        return res.status(404).json({ error: 'No se encontraron compras' });
       }
+      
+      res.json(result)
 
+   
+    
+
+    }catch(error){
+      console.error('Error obteniendo el conteo de compras por usuario');
+      res.status(500).json({error:'Error interno del servidor'})
     }
+  }
+
+
+
+  static getEstadisticasCompras = async (req,res)=>{
+    const {userId,startDate,endDate} = req.query
+    console.log(userId,startDate,endDate)
+      try {
+        const results = await  comprasModel.getEstadisticasCompras(userId,startDate,endDate)
+        
+        if(!results){
+          return res.status(404).json({error: 'Usuario no encontrado'})
+        }
+        const compras= await comprasModel.getCompras()
+
+console.log(compras)
+
+      const  total_compras_realizadas= compras.length;
+      const  total_Gastado_en_Compras = compras.reduce((acc, curr) => acc + parseFloat(curr.total_compra), 0); // Suma total de todas las compras
+      const promedio_de_Compra = total_Gastado_en_Compras / total_compras_realizadas; // Promedio de compra
+      const totalProductos = results.reduce((acc, curr) => acc + curr.cantidad, 0); // Total de productos comprados
+      const promedioProductosPorCompra = totalProductos / total_compras_realizadas; // Promedio de productos por compra
+      const primeraCompra = results[0].fecha; // Fecha de la primera compra (más antigua)
+      const ultimaCompra = results[results.length - 1].fecha; // Fecha de la última compra (más reciente)
+
+
+        res.status(200).json({
+          total_compras_realizadas,
+          total_Gastado_en_Compras,
+          promedio_de_Compra,
+          totalProductos,
+          promedioProductosPorCompra,
+          primeraCompra,
+          ultimaCompra})
+
+        
+      } catch (error) {
+        console.log(error)
+        return  res.status(500).json({error: 'Error interno del servidor'})
+
+
+      }
+    }
+
+
+}
+
 
 export default comprasController;
