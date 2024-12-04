@@ -413,9 +413,14 @@ static getLoginHistory = async (req,res)=>{
 
 
 static getUsersWithPagination = async (req,res)=>{
-    const {page= 1,limit=10}= req.query
-    const offset= (page - 1 ) * limit;
-    
+    let {page= 1,limit=10}= req.query
+    // Convertir page y limit a números enteros
+   page = parseInt(page, 10);   // Asegurarse de que 'page' sea un número entero
+   limit = parseInt(limit, 10); // Asegurarse de que 'limit' sea un número entero
+   
+       const offset= (page - 1 ) * limit;
+
+
     try {
         const result = await UserModel.getUsersWithPagination(limit,offset);
         res.status(200).json(result)
