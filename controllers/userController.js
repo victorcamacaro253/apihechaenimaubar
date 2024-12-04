@@ -3,9 +3,11 @@ import { hash, compare } from 'bcrypt';
 import UserModel from '../models/userModels.js'
 import emailService from '../services/emailService.js';
 import tokenService from '../services/tokenService.js';
-import redis from '../db/redis.js';
 import notificationService from '../services/notificationService.js';
+import cacheService from '../services/cacheService.js';
 import handleError from '../utils/handleError.js';
+import csvParser from 'csv-parser';
+import fs from 'fs';
 
 
 class userController{
@@ -14,18 +16,27 @@ static getAllUser = async (req, res) => {
    // res.header('Access-Control-Allow-Origin','*')
     try {
 
-     const cachedUsers= await redis.get('users');
+        
+      
+    // const cachedUsers= await redis.get('users');
+    const cachedUsers = await cacheService.getFromCache('users')
+
+
      if (cachedUsers) {
-        console.log('datos obtenidos desde redis')
-        return res.status(200).json(JSON.parse(cachedUsers))
+      console.log('datos obtenidos desde redis')
+        notificationService.getNotifications()
+        return res.status(200).json(cachedUsers)
      }
 
 
         const results = await UserModel.getAllUsers();
 
-       await redis.set('users',JSON.stringify(results),'EX',600)
+      // await redis.set('users',JSON.stringify(results),'EX',600)
+     await cacheService.setToCache('users',results)
+
 
         res.json(results);
+        
     } catch (error) {
         handleError(res,error)    
     }
@@ -36,11 +47,13 @@ static getUserById = async (req, res) => {
 
     try {
 
-       const cachedUser= await redis.get(`user:${id}`)
+     //  const cachedUser= await redis.get(`user:${id}`)
+     const cachedUser = await cacheService.getFromCache(`user:${id}`);
 
-       if (cachedUser) {
-        console.log('Datos obtenidos desde redis')
-        return res.status(200).json(JSON.parse(cachedUser))
+
+     if (cachedUser) {
+       console.log('Datos obtenidos desde redis')
+       return res.status(200).json(cachedUser)
         
        }
 
@@ -56,7 +69,9 @@ static getUserById = async (req, res) => {
                 message: `No se pudo encontrar un usuario con el ID proporcionado: ${id}` 
             });
         }
-        await redis.set(`user:${id}`,JSON.stringify(user),'EX',600)
+       // await redis.set(`user:${id}`,JSON.stringify(user),'EX',600)
+       await cacheService.setToCache(`user:${id}`, result);
+
 
         // Envía el usuario encontrado como respuesta
         res.json(user);
@@ -95,7 +110,9 @@ static addUser = async (req, res) => {
         const hashedPassword = await hash(password, 10);
         const result = await UserModel.addUser(name, apellido, cedula, email,hashedPassword);
 
-        await redis.del('users');
+        //await redis.del('users');
+        await cacheService.deleteFromCache('users');
+
 
 
         //await connection.commit();
@@ -159,8 +176,10 @@ static updateUser = async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
-        await redis.del(`user:${id}`);
-        await redis.del('users');
+       // await redis.del(`user:${id}`);
+       // await redis.del('users');
+       await cacheService.deleteFromCache(`user:${id}`);
+       await cacheService.deleteFromCache('users');
         
 
         res.status(200).json({ message: 'Usuario actualizado exitosamente' });
@@ -183,8 +202,10 @@ static deleteUser = async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
-        await redis.del(`user:${id}`);
-        await redis.del('users');
+       // await redis.del(`user:${id}`);
+       // await redis.del('users');
+       await cacheService.deleteFromCache(`user:${id}`);
+   await cacheService.deleteFromCache('users');
         
 
         res.status(200).json({ message: 'Usuario eliminado exitosamente' });
@@ -256,7 +277,7 @@ static partialUpdateUser = async (req, res) => {
         }
 
         res.status(200).json({ message: 'Usuario actualizado parcialmente exitosamente' });
-    } catch (err) {
+    } catch (error) {
         console.error('Error ejecutando la consulta:', err);
         handleError(res,error)    
     }
@@ -414,13 +435,13 @@ static getLoginHistory = async (req,res)=>{
 
 static getUsersWithPagination = async (req,res)=>{
     let {page= 1,limit=10}= req.query
-    // Convertir page y limit a números enteros
-   page = parseInt(page, 10);   // Asegurarse de que 'page' sea un número entero
-   limit = parseInt(limit, 10); // Asegurarse de que 'limit' sea un número entero
-   
-       const offset= (page - 1 ) * limit;
 
+     // Convertir page y limit a números enteros
+     page = parseInt(page, 10);   // Asegurarse de que 'page' sea un número entero
+     limit = parseInt(limit, 10); // Asegurarse de que 'limit' sea un número entero
 
+    const offset= (page - 1 ) * limit;
+    
     try {
         const result = await UserModel.getUsersWithPagination(limit,offset);
         res.status(200).json(result)
@@ -663,6 +684,117 @@ static resetPassword= async (req,res)=>{
         res.status(500).json({ message: 'Error resetting password', error: error.message });    
     }
 }
+
+/*
+ static importUsers = async (req, res) => {
+    const filePath = req.file.path
+    const users =[]
+    try {
+        const readStream = fs.createReadStream(filePath)
+        const parseStream = readStream.pipe(csvParser())
+
+        parseStream.on('data',async (row)=>{
+          //  console.log(row)
+            const hashedPassword= await hash(row.contraseña, 10)
+            users.push({
+                name: row.nombre,
+                apellido: row.apellido,
+                cedula: row.cedula,
+                email: row.correo,
+                hashedPassword : hashedPassword,
+                rol: row.rol,
+                imagen : row.imagen
+            })
+
+            
+        })
+
+        await new Promise ((resolve,reject)=>{
+                parseStream.on('end',resolve)
+                parseStream.on('error',reject)
+        })
+
+        console.log(users)
+        const count = await UserModel.addMultipleUser(users)
+
+        fs.unlinkSync(filePath)
+
+        return res.json({message:'Usuarios Importados correctamente'})
+
+    } catch (error) {
+        console.log('Error al procesar el archivo  o importar usuarios',error)
+
+        if(fs.existsSync(filePath)){
+            fs.unlinkSync(filePath)
+        }
+        return  res.status(500).json({message:'Error al importar productos',error})
+        
+    }
+ }*/
+
+
+static importUsers = async (req, res) => {
+    const filePath = req.file.path;
+    const users = [];
+
+    try {
+        const readStream = fs.createReadStream(filePath);
+        const parseStream = readStream.pipe(csvParser());
+
+        // Usamos un array para almacenar las promesas
+        const promises = [];
+
+        parseStream.on('data', (row) => {
+            promises.push(
+                new Promise(async (resolve, reject) => {
+                    try {
+                        const hashedPassword = await hash(row.contraseña, 10);
+                        users.push({
+                            name: row.nombre,
+                            apellido: row.apellido,
+                            cedula: row.cedula,
+                            email: row.correo,
+                            hashedPassword: hashedPassword,
+                            rol: row.rol,
+                            imagen: row.imagen,
+                        });
+                        resolve(); // Resolvemos la promesa una vez que el usuario se haya agregado
+                    } catch (error) {
+                        reject(error); // En caso de error, rechazamos la promesa
+                    }
+                })
+            );
+        });
+
+        // Esperamos a que todas las promesas de datos se resuelvan
+        await new Promise((resolve, reject) => {
+            parseStream.on('end', resolve);
+            parseStream.on('error', reject);
+        });
+
+        // Esperamos a que todas las promesas de usuarios se resuelvan
+        await Promise.all(promises);
+
+        // Ahora insertamos los usuarios en la base de datos
+        const count = await UserModel.addMultipleUser(users);
+
+        // Eliminamos el archivo una vez procesado correctamente
+        fs.unlinkSync(filePath);
+
+        return res.json({ message: 'Usuarios Importados correctamente' });
+    } catch (error) {
+        console.log('Error al procesar el archivo o importar usuarios', error);
+
+        // Eliminamos el archivo si ocurrió un error
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+
+        return res.status(500).json({ message: 'Error al importar usuarios', error });
+    }
+};
+
+
 }
 
 
