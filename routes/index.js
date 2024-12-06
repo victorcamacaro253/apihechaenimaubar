@@ -8,6 +8,7 @@ import paymentRoutes from  './paymentRoutes.js'; // Rutas de pago
 import rolesPermisosRoutes from './rolesPermisosRoutes.js'
 import notificationsRoutes from  './notificationsRoutes.js'
 import notificationsUserRoutes from  './notificationUserRoutes.js'
+import importRoutes from './importRoutes.js'
 import webhooksRoutes from './webhooksRoutes.js'
 import apiKeyRoutes from './apiKeyRoutes.js'
 import notFoundAndErrorHandler from '../middleware/routeNotFound.js'
@@ -49,9 +50,13 @@ router.use('/v1/notifications',notificationsRoutes)
 //Rutas para manejar las notificaciones de usuarios
 router.use('/v1/userNotifications',notificationsUserRoutes)
 
+router.use('/v1/import',importRoutes)
+
 router.use('/v1/webhook',webhooksRoutes)
 
 router.use('/v1/apiKey',apiKeyRoutes)
+
+
 
 router.use(notFoundAndErrorHandler.routeNotFound)
 

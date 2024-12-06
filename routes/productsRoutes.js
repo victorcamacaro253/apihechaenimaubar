@@ -5,7 +5,7 @@ import upload from '../middleware/multerConfig.js';
 const router = Router();
 
 //Ruta para obtener los productos filtrado por nombre
-router.get('/searchProductByName',productController.searchProductByName)
+router.get('/getProductByName',productController.getProductByName)
 
 //Ruta para obtener todos los productos
 router.get('/',productController.getProducts)
@@ -20,12 +20,14 @@ router.get('/price',productController.getProductsByPrinceRange)
 
 router.get('/topSelling',productController.getTopSelling)
 
+router.get('/availability',productController.getAvailableProducts)
+
 
 //Ruta para obtener los productos por id
 router.get('/:id',productController.getProductsById)
 
 //Ruta para ingresar multiples productos
-router.post('/addMultipleProducts',upload.single('image'),productController.addMultipleProducts)
+router.post('/addMultipleProducts',upload.array('image'),productController.addMultipleProducts)
 
 
 //Ruta para añadir un producto
@@ -40,8 +42,6 @@ router.put('/:id',productController.updateProduct)
 //Ruta para eliminar multiples productos
 router.post('/deleteMultipleProducts',productController.deleteMultipleProducts)
 
-//Ruta para importar un archivo csv
-router.post('/import',upload.single('file'),productController.importProduct)
 
 //Ruta para eliminar el producto
 
