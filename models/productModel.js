@@ -134,6 +134,13 @@ async updateTopSelling (id_producto,quantity){
 
 
 
+},
+
+async getAvailableProducts(){
+
+    const sql = `SELECT id_producto,nombre_producto,stock from productos WHERE stock > 0` 
+    const result = await _query(sql)
+    return result
 }
 
 
