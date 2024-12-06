@@ -4,6 +4,7 @@ import ProductModel from '../models/productModel.js';
 import categoriasModel from '../models/categoriasModel.js';
 import fs  from 'fs'; // Importa fs si lo necesitas
 import csvParser from 'csv-parser';
+import handleError from '../utils/handleError.js';
 
 
 class productController{
@@ -346,7 +347,7 @@ static filterProduct = async (req, res) => {
   }
     
 
-  static searchProductByName = async (req, res) => {
+  static getProductByName = async (req, res) => {
     const { nombre_producto } = req.query;
 
     if (!nombre_producto) {
@@ -370,7 +371,7 @@ static filterProduct = async (req, res) => {
 
 
 
-
+//------------------------------------------------------------------------------------------------------------
 
 
 static updateProduct = async (req, res) => {
@@ -434,6 +435,7 @@ static updateProduct = async (req, res) => {
 };
 
 
+//---------------------------------------------------------------------------------------------------------
 
   static getTopSelling = async  (req, res) => {
     try {
@@ -451,57 +453,30 @@ static updateProduct = async (req, res) => {
 
        }
 
+//---------------------------------------------------------------------------------------------------
 
-static importProduct = async  (req, res) => {
-    const filePath= req.file.path
-    const products= []
 
+ static getAvailableProducts = async (req,res)=>{
     try {
-        const readStream= fs.createReadStream(filePath);
-        const parseStream = readStream.pipe(csvParser())
 
+        const products = await ProductModel.getAvailableProducts();
 
-     parseStream.on('data',(row)=>{
-        products.push({
-            codigo: row.codigo,
-            nombre_producto: row.nombre_producto,
-            descripcion: row.descripcion,
-            precio: parseFloat(row.precio),
-            stock:parseInt(stock),
-            id_categoria: parseInt(id_categoria),
-            activo:row.activo,
-            id_proveedor: parseInt(row.id_proveedor),
-            imagen:row.imagen
+        const totalProducts=  products.length
+        const totalStock = products.reduce((acc,product)=>acc + product.stock,0)
+
+        res.json({
+            products,
+            totalProducts,
+            totalStock
         })
-     })
-
-     console.log(products)
-
-     await new Promise ((resolve,reject)=>{
-        parseStream.on('end',resolve)
-        parseStream.on('error',reject)
-     })
-
-
-     const count = await  ProductModel.importProducts(products)
-
-     fs.unlinkSync(filePath)
-
-     return res.json({message:'Productos Importados Exitosamente',count})
-
-
+        
     } catch (error) {
-        console.log('Error al procesar el archivo  o importar prodcutos',error)
-
-        if(fs.existsSync(filePath)){
-            fs.unlinkSync(filePath)
-        }
-        return  res.status(500).json({message:'Error al importar productos',error})
-
+        handleError(res,error)
+        
     }
+ }
 
 
-}
 }
 
 export default productController

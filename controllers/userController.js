@@ -8,6 +8,8 @@ import cacheService from '../services/cacheService.js';
 import handleError from '../utils/handleError.js';
 import csvParser from 'csv-parser';
 import fs from 'fs';
+import XLSX from 'xlsx';
+
 
 
 class userController{
@@ -684,115 +686,6 @@ static resetPassword= async (req,res)=>{
         res.status(500).json({ message: 'Error resetting password', error: error.message });    
     }
 }
-
-/*
- static importUsers = async (req, res) => {
-    const filePath = req.file.path
-    const users =[]
-    try {
-        const readStream = fs.createReadStream(filePath)
-        const parseStream = readStream.pipe(csvParser())
-
-        parseStream.on('data',async (row)=>{
-          //  console.log(row)
-            const hashedPassword= await hash(row.contraseña, 10)
-            users.push({
-                name: row.nombre,
-                apellido: row.apellido,
-                cedula: row.cedula,
-                email: row.correo,
-                hashedPassword : hashedPassword,
-                rol: row.rol,
-                imagen : row.imagen
-            })
-
-            
-        })
-
-        await new Promise ((resolve,reject)=>{
-                parseStream.on('end',resolve)
-                parseStream.on('error',reject)
-        })
-
-        console.log(users)
-        const count = await UserModel.addMultipleUser(users)
-
-        fs.unlinkSync(filePath)
-
-        return res.json({message:'Usuarios Importados correctamente'})
-
-    } catch (error) {
-        console.log('Error al procesar el archivo  o importar usuarios',error)
-
-        if(fs.existsSync(filePath)){
-            fs.unlinkSync(filePath)
-        }
-        return  res.status(500).json({message:'Error al importar productos',error})
-        
-    }
- }*/
-
-
-static importUsers = async (req, res) => {
-    const filePath = req.file.path;
-    const users = [];
-
-    try {
-        const readStream = fs.createReadStream(filePath);
-        const parseStream = readStream.pipe(csvParser());
-
-        // Usamos un array para almacenar las promesas
-        const promises = [];
-
-        parseStream.on('data', (row) => {
-            promises.push(
-                new Promise(async (resolve, reject) => {
-                    try {
-                        const hashedPassword = await hash(row.contraseña, 10);
-                        users.push({
-                            name: row.nombre,
-                            apellido: row.apellido,
-                            cedula: row.cedula,
-                            email: row.correo,
-                            hashedPassword: hashedPassword,
-                            rol: row.rol,
-                            imagen: row.imagen,
-                        });
-                        resolve(); // Resolvemos la promesa una vez que el usuario se haya agregado
-                    } catch (error) {
-                        reject(error); // En caso de error, rechazamos la promesa
-                    }
-                })
-            );
-        });
-
-        // Esperamos a que todas las promesas de datos se resuelvan
-        await new Promise((resolve, reject) => {
-            parseStream.on('end', resolve);
-            parseStream.on('error', reject);
-        });
-
-        // Esperamos a que todas las promesas de usuarios se resuelvan
-        await Promise.all(promises);
-
-        // Ahora insertamos los usuarios en la base de datos
-        const count = await UserModel.addMultipleUser(users);
-
-        // Eliminamos el archivo una vez procesado correctamente
-        fs.unlinkSync(filePath);
-
-        return res.json({ message: 'Usuarios Importados correctamente' });
-    } catch (error) {
-        console.log('Error al procesar el archivo o importar usuarios', error);
-
-        // Eliminamos el archivo si ocurrió un error
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
-
-        return res.status(500).json({ message: 'Error al importar usuarios', error });
-    }
-};
 
 
 }
