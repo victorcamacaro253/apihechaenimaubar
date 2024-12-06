@@ -5,8 +5,6 @@ import http from 'http';
 import helmet from 'helmet';
 import routes from './routes/index.js';  // Importa el archivo de rutas
 import cors from 'cors';
-//import cookieParser from 'cookie-parser';
-//import csrf from 'csurf';
 import passport from 'passport';
 import morgan from 'morgan';
 import { setupWebSocket } from './services/websocketServer.js'; // Importa la función para configurar WebSocket
