@@ -8,8 +8,8 @@ router.get('/roles/rol',rolesPermisosController.getRoleByName)
 router.get('roles/:id', rolesPermisosController.getRolesById);
 
 router.post('/roles/', rolesPermisosController.createRole);
-router.put('roles/:id', rolesPermisosController.updateRole);
-router.delete('roles/:id', rolesPermisosController.deleteRole);
+router.put('/roles/:id', rolesPermisosController.updateRole);
+router.delete('/roles/:id', rolesPermisosController.deleteRole);
 
 router.get('/permisos',rolesPermisosController.getPermisos)
 
@@ -21,6 +21,11 @@ router.get('/permisos/:id',rolesPermisosController.getPermisosById)
 
 router.post('/permisos/', rolesPermisosController.createPermiso); // para crear un nuevo
 router.put('/:id', rolesPermisosController.updatePermiso); // para actualizar un existente
-router.delete('/:id', rolesPermisosController.deletePermiso); // para eliminar un exist
+router.delete('/:id', rolesPermisosController.deletePermiso); // para eliminar un existente permiso
+
+
+
+router.get('/permisosByRole/:id',rolesPermisosController.getPermisosByRole)
+
  export  default router;
 

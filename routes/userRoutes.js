@@ -28,13 +28,16 @@ router.post('/login', userController.loginUser);
 router.get('/:id',userController.getUserById);
 
 
+
 router.put('/:id', userController.updateUser);
+
 
 router.delete('/:id', userController.deleteUser);
 
 
 router.patch('/:id', userController.partialUpdateUser)
 
+router.put('/status/:id/:status',userController.changeStatus)
 
 router.post('/addMultipleUsers',upload.array('image'),userController.addMultipleUsers)
 
@@ -45,8 +48,7 @@ router.post('/requestPasswordReset',userController.requestPasswordReset)
 
 router.post('/resetPassword/:token',userController.resetPassword)
 
-// Ruta para refrescar el access token
-router.post('/refresh', AuthController.refreshToken);
+
 
 
 export default router;
