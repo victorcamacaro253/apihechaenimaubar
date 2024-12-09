@@ -497,16 +497,16 @@ static getLoginHistory = async (req,res)=>{
 
 
 static getUsersWithPagination = async (req,res)=>{
-    const {page= 1,limit=10}= req.query
+    let {page= 1,limit=10}= req.query
 // Convertir page y limit a números enteros
-const pagel = parseInt(page, 10);   // Asegurarse de que 'page' sea un número entero
-const limitl = parseInt(limit, 10); // Asegurarse de que 'limit' sea un número entero
+ page = parseInt(page, 10);   // Asegurarse de que 'page' sea un número entero
+ limit = parseInt(limit, 10); // Asegurarse de que 'limit' sea un número entero
 
 
-    const offset= (pagel - 1 ) * limitl;
+    const offset= (page - 1 ) * limit;
     
     try {
-        const result = await UserModel.getUsersWithPagination(limitl,offset);
+        const result = await UserModel.getUsersWithPagination(limit,offset);
         res.status(200).json(result)
 
     } catch (error) {
@@ -617,6 +617,45 @@ static deleteMultipleUsers= async (req,res)=>{
  }
 
 }
+
+static changeStatus = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.params; 
+
+    try {
+        const user = await UserModel.getUserById(id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Verifica el estado actual del usuario
+        if (user.estatus === 'activo' && status === 'activo') {
+            return res.status(400).json({ message: 'El usuario ya está activo' });
+        }
+
+        // Cambia el estado solo si el usuario está inactivo
+        if (user.estatus === 'inactivo' && status === 'activo') {
+            const update = await UserModel.changeStatus('activo', id);
+            if (!update) {
+                return res.status(404).json({ message: 'No se ha actualizado' });
+            }
+            return res.json({ message: 'Se ha cambiado el estatus a activo' });
+        }
+
+        // Si el estado es inválido, se cambia a inválido
+        const update = await UserModel.changeStatus('inactivo', id);
+        if (!update) {
+            return res.status(404).json({ message: 'No se ha actualizado' });
+        }
+
+        res.json({ message: 'Se ha cambiado el estatus exitosamente' });
+
+    } catch (error) {
+        return res.status(500).json({ message: 'Error interno del servidor' });
+    }
+}
+
 /*
 const getcorreo = async (req, res) => {
     const { email, password } = req.body;
@@ -732,6 +771,8 @@ static resetPassword= async (req,res)=>{
         res.status(500).json({ message: 'Error resetting password', error: error.message });    
     }
 }
+
+
 }
 
 

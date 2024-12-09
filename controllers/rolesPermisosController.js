@@ -223,8 +223,27 @@ static   updateRole= async (req,res)=>{
             res.status(500).json({message: 'Error al eliminar el permiso'})
         }
     }
+
+    static getPermisosByRole= async (req,res)=>{
+        const {id}= req.params
+        try{
+            const permiso = await rolesPermisosModel.getPermisosByRole(id)
+            res.json(permiso)
+            }catch(error){
+
+                console.log(error)
+                res.status(500).json({message: 'Error al obtener los permisos del rol'})
+
+                
+            }
+
+                }
+
+
+
+    }
     
 
-}
+
 
 export default rolesPermisosController
