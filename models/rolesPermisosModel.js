@@ -100,7 +100,24 @@ const rolePermisosModel ={
         
     },
     
-    
+    async getPermisosByRole (roleId){
+       
+        const sql = `
+     SELECT p.permiso
+      FROM permisos p
+       JOIN rol_permisos rp ON p.id = rp.permiso_id
+          WHERE rp.role_id = ?;
+           `;
+
+        try {
+    const results = await query(sql, [roleId]);
+    return results
+   } catch (error) {
+console.error(error);
+throw new Error('Error en la consulta');
+}
+
+}
       
 }
 

@@ -197,8 +197,12 @@ try {
         console.error('Error al obtener usuarios con paginacion',error)
         throw error;
     }
- }
+ },
 
+ async changeStatus(status,id){
+    const result = await _query('UPDATE usuario SET estatus = ? WHERE id = ?',[status,id])
+    return result
+ }
 
 };
 
