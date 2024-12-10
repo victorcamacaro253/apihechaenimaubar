@@ -3,6 +3,8 @@ import { Router } from "express";
 
 const router=  Router();
 
+router.get('/',rolesPermisosController.getPermisosByRole)
+
 router.get('/roles/', rolesPermisosController.getRoles);   
 router.get('/roles/rol',rolesPermisosController.getRoleByName) 
 router.get('roles/:id', rolesPermisosController.getRolesById);
@@ -16,7 +18,6 @@ router.get('/permisos',rolesPermisosController.getPermisos)
 router.get('/permisos/permiso',rolesPermisosController.getPermisosByName)
 
 router.get('/permisos/:id',rolesPermisosController.getPermisosById)
-
 
 
 router.post('/permisos/', rolesPermisosController.createPermiso); // para crear un nuevo

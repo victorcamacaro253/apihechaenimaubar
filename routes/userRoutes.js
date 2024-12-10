@@ -60,6 +60,9 @@ router.post('/resetPassword/:token',userController.resetPassword)
 
 router.put('/:id', userController.updateUser);
 
+//Ruta para cambiar el estado del usuario
+router.put('/status/:id/:status',userController.changeStatus)
+
 //Ruta para eliminar un producto
 
 router.delete('/:id', userController.deleteUser);
