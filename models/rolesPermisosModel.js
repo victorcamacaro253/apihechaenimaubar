@@ -86,7 +86,7 @@ const rolePermisosModel ={
                             const sql = `
                          SELECT p.permiso
                           FROM permisos p
-                           JOIN rol_permisos rp ON p.id = rp.permiso_id
+                           JOIN roles_permisos rp ON p.id = rp.permiso_id
                               WHERE rp.role_id = ?;
                                `;
     
@@ -99,6 +99,12 @@ const rolePermisosModel ={
             }
         
     },
+
+    async listPermisosByRol(){
+        const sql = `SELECT r.id_rol AS rol_id, r.rol AS rol_nombre, GROUP_CONCAT(p.permiso SEPARATOR ', ') AS permisos FROM roles r JOIN roles_permisos rp ON r.id_rol = rp.rol_id JOIN permisos p ON rp.permiso_id = p.id GROUP BY r.id_rol, r.rol ORDER BY r.id_rol`
+        const results = await query(sql, []);
+        return results;
+    }
     
     
       

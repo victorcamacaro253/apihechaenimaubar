@@ -205,6 +205,7 @@ async getUsersWithPagination(limit,offset){
   
 
     async addMultipleUser(users){
+        console.log(users)
         const queries = users.map(user=>{
             const {name,apellido,cedula,email,hashedPassword,rol,imagen} = user;
 
@@ -236,7 +237,18 @@ async getUsersWithPagination(limit,offset){
         const query = 'SELECT * FROM usuario WHERE twitter_id = ?';
         const [rows] = await _query(query, [twitterId]);
         return rows;
-    }
+    },
+    async changeStatus(status,id){
+        const result = await _query('UPDATE usuario SET estatus = ? WHERE id = ?',[status,id])
+        return result
+     },
+
+     async getUserStatus(id){
+        const sql = "SELECT estatus FROM usuario WHERE id= ?"
+        const [result]= await _query(sql,[id])
+        return result 
+     }
+    
 
 };
 
