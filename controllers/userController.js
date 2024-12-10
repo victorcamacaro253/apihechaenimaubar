@@ -6,16 +6,14 @@ import tokenService from '../services/tokenService.js';
 import notificationService from '../services/notificationService.js';
 import cacheService from '../services/cacheService.js';
 import handleError from '../utils/handleError.js';
-import csvParser from 'csv-parser';
-import fs from 'fs';
-import XLSX from 'xlsx';
+
 
 
 
 class userController{
 
 static getAllUser = async (req, res) => {
-   // res.header('Access-Control-Allow-Origin','*')
+   
     try {
 
         
@@ -212,8 +210,7 @@ static deleteUser = async (req, res) => {
 
         res.status(200).json({ message: 'Usuario eliminado exitosamente' });
     } catch (err) {
-        console.error('Error ejecutando la consulta:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)    
     }
 };
 
@@ -374,7 +371,7 @@ static getPerfil = async (req, res) => {
         res.status(200).json(results);
 
     } catch (error) {
-        console.error('Error obteniendo el perfil:', error);
+      
         handleError(res,error)    
     }
 };
@@ -402,7 +399,7 @@ const {id} = req.params;
         res.status(200).json(results);
 
     } catch (error) {
-        console.error('Error obteniendo el perfil:', error);
+      
         handleError(res,error)    
     }
 
@@ -429,7 +426,7 @@ static getLoginHistory = async (req,res)=>{
         
         res.json(result);
     } catch (error) {
-        console.error('Error al obtener el historial de ingresos',error);
+       
         handleError(res,error)    
     }
 }
@@ -449,7 +446,7 @@ static getUsersWithPagination = async (req,res)=>{
         res.status(200).json(result)
 
     } catch (error) {
-        console.error('Error al obtener la paginacion',error)
+      
         handleError(res,error)    
     }
 }
@@ -540,7 +537,7 @@ static addMultipleUsers = async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Error ejecutando la consulta:', error);
+        
         handleError(res,error)    
 
     }
@@ -570,6 +567,44 @@ static deleteMultipleUsers= async (req,res)=>{
     handleError(res,error)    
 }
 
+}
+
+
+static changeStatus = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.params; 
+console.log(id,status)
+    try {
+        const user = await UserModel.getUserStatus(id);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Verifica el estado actual del usuario
+        if (user.estatus === 'activo' && status === 'activo') {
+            return res.status(400).json({ message: 'El usuario ya está activo' });
+        }
+
+        // Cambia el estado solo si el usuario está inactivo
+        if (user.estatus === 'inactivo' && status === 'activo') {
+            const update = await UserModel.changeStatus('activo', id);
+            if (!update) {
+                return res.status(404).json({ message: 'No se ha actualizado' });
+            }
+            return res.json({ message: 'Se ha cambiado el estatus a activo' });
+        }
+
+        // Si el estado es inválido, se cambia a inválido
+        const update = await UserModel.changeStatus('inactivo', id);
+        if (!update) {
+            return res.status(404).json({ message: 'No se ha actualizado' });
+        }
+
+        res.json({ message: 'Se ha cambiado el estatus exitosamente' });
+
+    } catch (error) {
+        handleError(res,error)    
+    }
 }
 /*
 const getcorreo = async (req, res) => {

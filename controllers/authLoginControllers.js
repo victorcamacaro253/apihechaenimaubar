@@ -125,27 +125,23 @@ static refreshToken = async (req,res)=>{
                 return res.status(403).json({error:'Invalid or expired refresh token'})
                 }
 
-
+console.log(decoded)
                 const user= await UserModel.getUserById(decoded.id)
-
-                if(!user){
+                if(!user || user.length===0){
                     return res.status(404).json({error:'User not found'})
                     }
 
 
-              const tokenRecord= await tokenModel.verifyToken(refreshToken,decoded.id)
+              const tokenRecord= await tokenModel.verifyExistingToken(refreshToken,decoded.id)
 
-              
-        if (tokenRecord.rowCount === 0) {
-            return res.status(403).json({ error: 'Invalid or revoked refresh token' });
-        }
+               // Verificar si el token está revocado
+               if (!tokenRecord || tokenRecord.length === 0 ) {
+                return res.status(403).json({ error: 'Invalid or revoked refresh token' });
+            }
+    
 
 
-             /*   const result = await tokenModel.revocateToken(refreshToken)
-                if(result.length===0){
-                    return res.status(404).json({error:'Refresh token not found'})
-                    } */
-                    const newAccessToken = tokenService.generateToken(decoded.id,decoded.correo,decoded.rol,'1h')
+                    const newAccessToken = tokenService.generateToken(decoded.id,decoded.email,user.rol,'1h')
                     
                     
                         res.json({ 

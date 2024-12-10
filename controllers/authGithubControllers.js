@@ -8,7 +8,7 @@ passport.use(new GitHubStrategy({
     callbackURL: 'http://localhost:3000/auth/github/callback',
     scope: ['user:email'], // Asegúrate de incluir el alcance aquí
 
-  },
+  },  
   async (accessToken, refreshToken, profile, done) => {
     try {
       let user = await UserModel.findUserByGithubId(profile.id);

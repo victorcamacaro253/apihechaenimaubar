@@ -6,6 +6,8 @@ import comprasModel from '../models/comprasModel.js';
 //import comprasModel from '../models/firebase/comprasModel_firebase.js'
 import XLSX from 'xlsx';
 import { Parser  } from 'json2csv';
+import handleError from '../utils/handleError.js';
+import { error } from 'console';
 //import UserModel from '../models/firebase/userModel_firebase.js';
 
 
@@ -26,8 +28,22 @@ static exportUsersData = async (req,res)=>{
 
     //Create a worksheet from users data
     const ws= XLSX.utils.json_to_sheet(users,{
-        header:['id','nombre','apellido','cedula','correo']
+        header:['id','nombre','apellido','cedula','correo','contraseña','imagen']
     })
+
+          // Ajustar automáticamente el ancho de las columnas
+          const colWidths = [
+            { wch: 10 }, // Ancho para "id"
+            { wch: Math.max(10, ...users.map(user => user.nombre?.length || 0)) }, // Ancho para "nombre"
+            { wch: Math.max(10, ...users.map(user => user.apellido?.length || 0)) }, // Ancho para "apellido"
+            { wch: Math.max(10, ...users.map(user => user.cedula?.length || 0)) }, // Ancho para "cedula"
+            { wch: Math.max(10, ...users.map(user => user.correo?.length || 0))},
+            { wch: Math.max(10, ...users.map(user => user.contraseña?.length || 0))},
+            { wch: Math.max(10, ...users.map(user => user.imagen?.length || 0))},
+            { wch: Math.max(10, ...users.map(user => user.google_id?.length || 0))}
+          ];
+          ws['!cols'] = colWidths;
+
 
     //Append the worksheet to the workbook
     XLSX.utils.book_append_sheet(wb,ws,'Usuarios');
@@ -45,8 +61,7 @@ static exportUsersData = async (req,res)=>{
     return excelBuffer
 
    } catch (error) {
-    console.error('Error al exportar los datos del usuario a Excel:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+   handleError(res,error)
    }
 
 }
@@ -87,8 +102,7 @@ static exportUserData = async (req,res)=>{
 
         return excelBuffer
     } catch (error) {
-        console.error('Error al exportar los datos del usuario a Excel:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+       handleError(res,error)
     }
 }
 
@@ -99,7 +113,7 @@ static exportUsersDataByName= async (req,res)=>{
     try {
         const users= await UserModel.getUserByNombre(nombre)
         if (!users || users.length === 0) {
-            throw new Error('No users found');
+            return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
           // Create a new workbook
@@ -125,8 +139,7 @@ static exportUsersDataByName= async (req,res)=>{
           return excelBuffer;
         
     } catch (error) {
-        console.error('Error al exportar los datos del usuario a Excel:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)
     }
 }
 
@@ -181,8 +194,7 @@ static exportUserDataPdf = async(req,res)=>{
     
     } catch (error) {
 
-        console.error('Error al exportar los datos del usuario a PDF:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+       handleError(res,error)
     }
 
 }
@@ -219,9 +231,8 @@ static exportUserDataByIdPdf = async (req,res)=>{
         // Finaliza el PDF y envíalo como respuesta
         doc.end();
         stream.pipe(res);
-    } catch (err) {
-        console.error('Error al exportar los datos del usuario a PDF:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    } catch (error) {
+     handleError(res,error)
     }
 }
 
@@ -244,8 +255,7 @@ static exportUserDataToCsv = async (req,res)=>{
     res.send(csv);
  
    } catch (error) {
-    console.error('Error al exportar los datos del usuario a CSV:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    handleError(res,error)
    }
 }
 
@@ -268,8 +278,7 @@ static exportUserDataToCsvByid = async (req,res)=>{
      res.send(csv);
   
     } catch (error) {
-     console.error('Error al exportar los datos del usuario a CSV:', error);
-         res.status(500).json({ error: 'Error interno del servidor' });
+     handleError(res,error)
     }
  }
 
@@ -287,8 +296,7 @@ static exportUserDataToCsvByid = async (req,res)=>{
         res.send(JSON.stringify(users,null,2))
 
     } catch (error) {
-        console.error('Error al exportar los datos del usuario a JSON:', error);
-         res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)
     }
  }
 
@@ -356,8 +364,7 @@ static exportUserDataToCsvByid = async (req,res)=>{
         return excelBuffer;
 
     } catch (error) {
-        console.error('Error al exportar los datos de las compras a Excel:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+       handleError(res,error)
     }
 };
 
@@ -426,8 +433,7 @@ static exportComprasData = async (req, res) => {
         return excelBuffer;
 
     } catch (error) {
-        console.error('Error al exportar los datos de las compras a Excel:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)
     }
 };
 
@@ -505,8 +511,7 @@ static exportComprasDataByName= async (req,res)=>{
           return excelBuffer;
         
     } catch (error) {
-        console.error('Error al exportar los datos del usuario a Excel:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)
     }
 }
 
@@ -596,8 +601,7 @@ try {
           return excelBuffer;
 
 } catch (error) {
-    console.error('Error al exportar los datos del usuario a Excel:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    handleError(res,error)
 }
 
 }
@@ -623,10 +627,6 @@ if(isNaN(formattedStartDate) || isNaN(formattedEndDate)){
 try {
 
     const compras= await  comprasModel.findByDateRangeUserId(id,formattedStartDate, formattedEndDate);
-
-
-
- 
 
     
      // Agrupar las compras
@@ -690,8 +690,7 @@ try {
           return excelBuffer;
 
 } catch (error) {
-    console.error('Error al exportar los datos del usuario a Excel:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    handleError(res,error)
 }
 }
 
@@ -882,8 +881,7 @@ static exportComprasDataPdf = async (req, res) => {
         stream.pipe(res);
 
     } catch (error) {
-        console.error('Error al exportar los datos de las compras a PDF:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    handleError(res,error)
     }
 };
 
@@ -984,8 +982,7 @@ static exportComprasDataByNamePdf= async (req,res)=>{
         stream.pipe(res);
 
     } catch (error) {
-        console.error('Error al exportar los datos de las compras a PDF:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)
     }
 }
 
@@ -1083,8 +1080,7 @@ static exportComprasByDatePdf = async (req,res)=>{
         stream.pipe(res);
 
     } catch (error) {
-        console.error('Error al exportar los datos de las compras a PDF:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)
     }
 }
 
@@ -1182,8 +1178,7 @@ static exportComprasUserDatePdf= async (req,res)=>{
         stream.pipe(res);
 
     } catch (error) {
-        console.error('Error al exportar los datos de las compras a PDF:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        handleError(res,error)
     }
 }
 
