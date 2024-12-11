@@ -74,5 +74,9 @@ router.get('/PDF/compras/date',exportControllers.exportComprasByDatePdf)
 
 router.get('/PDF/compras/:id/userFecha',exportControllers.exportComprasUserDatePdf)
 
+router.get('/PDF/products',exportControllers.exportProductsPdf)
+
+router.get('/Excel/products',exportControllers.exportProducts)
+
 
 export default router
