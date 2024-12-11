@@ -3,7 +3,7 @@ import PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
 import UserModel from '../models/userModels.js';
 import comprasModel from '../models/comprasModel.js';
-//import comprasModel from '../models/firebase/comprasModel_firebase.js'
+import ProductModel from '../models/productModel.js';
 import XLSX from 'xlsx';
 import { Parser  } from 'json2csv';
 import handleError from '../utils/handleError.js';
@@ -1180,6 +1180,153 @@ static exportComprasUserDatePdf= async (req,res)=>{
     } catch (error) {
         handleError(res,error)
     }
+}
+
+
+
+static exportProductsPdf = async (req, res) => {
+    try {
+        const products = await ProductModel.getAllProducts();
+        console.log(products);
+
+        if (!products || products.length === 0) {
+            throw new Error('No products found');
+        }
+
+        // Agrupar los productos
+        const groupedProducts = {};
+        products.forEach(row => {
+            if (!groupedProducts[row.id_producto]) {
+                groupedProducts[row.id_producto] = {
+                    id_producto: row.id_producto,
+                    codigo: row.codigo,
+                    nombre_producto: row.nombre_producto,
+                    descripcion: row.descripcion,
+                    precio: row.precio,
+                    stock: row.stock,
+                    vendido: row.vendido,
+                    activo: row.activo,
+                    categoria: row.categoria
+                };
+            }
+        });
+
+        const finalProducts = Object.values(groupedProducts);
+
+        const doc = new PDFDocument();
+        const stream = Readable.from(doc);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="productos_data.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+
+        doc.fontSize(18).text('Datos de Productos', { align: 'center' });
+        doc.moveDown(2);
+
+        const tableTop = doc.y;
+        const itemHeight = 20;
+
+        // Cabeceras de la tabla
+        doc.fontSize(12).fillColor('black')
+            .text('ID Producto', 50, tableTop)
+            .text('Código', 150, tableTop)
+            .text('Nombre', 300, tableTop)
+            .text('Descripción', 400, tableTop)
+            .text('Precio', 500, tableTop)
+            .text('Stock', 550, tableTop)
+            .text('Vendido', 600, tableTop)
+            .text('Activo', 650, tableTop)
+            .text('Categoría', 700, tableTop);
+
+        // Línea horizontal
+        doc.moveTo(50, tableTop + itemHeight).lineTo(750, tableTop + itemHeight).stroke();
+
+        let y = tableTop + itemHeight;
+
+        finalProducts.forEach(product => {
+            doc.fontSize(10).fillColor('black')
+                .text(product.id_producto, 50, y)
+                .text(product.codigo, 150, y)
+                .text(product.nombre_producto, 300, y)
+                .text(product.descripcion, 400, y)
+                .text(product.precio, 500, y)
+                .text(product.stock, 550, y)
+                .text(product.vendido, 600, y)
+                .text(product.activo, 650, y)
+                .text(product.categoria, 700, y);
+
+            y += itemHeight;
+
+            // Línea horizontal después de cada fila
+            doc.moveTo(50, y).lineTo(750, y).stroke();
+            y += itemHeight;
+        });
+
+        // Línea final
+        doc.moveTo(50, y).lineTo(750, y).stroke();
+
+        doc.end();
+        stream.pipe(res);
+
+    } catch (error) {
+        handleError(res, error);
+    }
+}
+
+
+static exportProducts = async (req,res)=>{
+    try {
+
+        const products= await ProductModel.getAllProducts();
+    
+        if(!products  || products.length === 0){
+return res.status(404).json({message: 'No hay productos'});
+
+        }
+    
+        //Create a new workbook
+        const wb= XLSX.utils.book_new();
+    
+        //Create a worksheet from users data
+        const ws= XLSX.utils.json_to_sheet(products,{
+            header:['id','codigo','nombre','descripcion','precio','stock','vendido','activo','categoria']
+        })
+    
+              // Ajustar automáticamente el ancho de las columnas
+              const colWidths = [
+                { wch: 10 }, // Ancho para "id"
+                { wch: Math.max(10, ...products.map(product => product.codigo?.length || 0)) }, // Ancho para "nombre"
+                { wch: Math.max(10, ...products.map(product => product.nombre?.length || 0)) }, // Ancho para "apellido"
+                { wch: Math.max(10, ...products.map(product => product.descripcion?.length || 0)) }, // Ancho para "cedula"
+                { wch: Math.max(10, ...products.map(product => product.precio?.length || 0))},
+                { wch: Math.max(10, ...products.map(product => product.stock?.length || 0))},
+                { wch: Math.max(10, ...products.map(product => product.vendido?.length || 0))},
+                { wch: Math.max(10, ...products.map(product => product.activo?.length || 0))},
+                { wch: Math.max(10, ...products.map(product => product.categoria?.length || 0))}
+
+              ];
+              ws['!cols'] = colWidths;
+    
+    
+        //Append the worksheet to the workbook
+        XLSX.utils.book_append_sheet(wb,ws,'Productos');
+    
+        //Convert workbook to buffer 
+        const excelBuffer = XLSX.write(wb,{bookType:'xlsx',type:'buffer'})
+    
+    
+    
+        res.setHeader('Content-Disposition', 'attachment; filename="user_data.xlsx"')
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        res.send(excelBuffer)
+    
+        
+        return excelBuffer
+    
+       } catch (error) {
+       handleError(res,error)
+       }
+    
+
 }
 
 }

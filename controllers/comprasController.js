@@ -379,6 +379,7 @@ static deleteCompra = async (req, res) => {
       // Agregar el producto a la compra
       compraAgrupada[row.id_compra].productos.push({
         id_producto: row.id_producto,
+        nombre_producto: row.nombre_producto,
         cantidad: row.cantidad,
         precio: row.precio
       });
