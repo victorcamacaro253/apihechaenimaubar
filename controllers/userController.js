@@ -468,9 +468,7 @@ const id = req.params.id;
     }
 
 }
-
-
-static getLoginHistory = async (req,res)=>{
+static getUserLoginHistory = async (req,res)=>{
    // const {id} = req.params;
    const{ nombre } =req.query
     try {
@@ -487,13 +485,70 @@ static getLoginHistory = async (req,res)=>{
                 message: `No se pudo encontrar un usuario con el nombre proporcionado: ${nombre}` 
             });
         }
-        
-        res.json(result);
+
+        const userData = result.map(({id,nombre,apellido,correo})=>({
+            id,nombre,apellido,correo
+        }))
+
+       const history = result.map(({fecha,codigo})=>({
+        fecha: new Date(fecha).toLocaleString(), // Convert to a friendly date format
+        codigo
+       }))
+
+
+
+
+        res.json({
+            historial:history,
+            total_ingresos: history.length,
+            usuario:userData[0]
+        })
     } catch (error) {
         console.error('Error al obtener el historial de ingresos',error);
         res.status(500).json({error:'Error interno del servidor',error})
     }
 }
+
+static async getUserLoginHistoryById(req,res){
+    const {id} = req.params;
+    try {
+        // const result= await UserModel.getLoginHistory(id)
+ 
+ 
+        const result= await UserModel.getUserLoginHistoryById(id);
+ 
+            // Verifica si se encontró el usuario
+            if (!result) {
+             // Usuario no encontrado, responde con un error 404
+             return res.status(404).json({ 
+                 error: 'Usuario no encontrado', 
+                 message: `No se pudo encontrar un usuario con el nombre proporcionado: ${nombre}` 
+             });
+         }
+ 
+         const userData = result.map(({id,nombre,apellido,correo})=>({
+             id,nombre,apellido,correo
+         }))
+ 
+        const history = result.map(({fecha,codigo})=>({
+         fecha: new Date(fecha).toLocaleString(), // Convert to a friendly date format
+         codigo
+        }))
+ 
+ 
+ 
+ 
+         res.json({
+             historial:history,
+             total_ingresos: history.length,
+             usuario:userData[0]
+         })
+     } catch (error) {
+         console.error('Error al obtener el historial de ingresos',error);
+         res.status(500).json({error:'Error interno del servidor',error})
+     }
+}
+
 
 
 static getUsersWithPagination = async (req,res)=>{
