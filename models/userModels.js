@@ -151,18 +151,16 @@ try {
         }
     },
 
-    /*
-    async getLoginHistory(id){
+  async getUserLoginHistoryById(id){
         try {
-            const result= await _query('SELECT * FROM historial_ingresos WHERE id =?',[id]);
+            const result= await _query('SELECT * FROM `historial_ingresos` INNER JOIN usuario ON historial_ingresos.id_usuario=usuario.id  WHERE usuario.id =?',[id]);
             return result;
         } catch (error) {
             console.error('Error ',error);
             throw err;
         }
-    }
-   */
-
+    },
+   
     async getLoginHistory(nombre){
         try {
             const result= await _query('SELECT * FROM `historial_ingresos` INNER JOIN usuario ON historial_ingresos.id_usuario=usuario.id WHERE usuario.nombre=?',[nombre])
