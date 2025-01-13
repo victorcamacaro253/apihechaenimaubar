@@ -13,7 +13,9 @@ router.get('/searchUser',userController.searchUsers);
 
 router.get('/getperfil',authenticateToken,checkPermission('read'),userController.getPerfil)
 
-router.get('/loginHistorial',userController.getLoginHistory)
+router.get('/loginHistorial',userController.getUserLoginHistory)
+
+router.get('/loginRecord/:id',userController.getUserLoginHistoryById)
 
 router.get('/getUserPerfil/:id',userController.getUserPerfil)
 
